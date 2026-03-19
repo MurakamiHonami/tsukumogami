@@ -4,7 +4,9 @@
   margin: 40px auto; 
   padding: 24px; 
   background: var(--sumi); 
-  border: 4px solid var(--kin);
+  border: 4px solid transparent;
+  border-image-source: var(--gold-texture);
+  border-image-slice: 120;
   border-radius: 0; 
   box-shadow: 16px 16px 0px rgba(0,0,0,0.9), 0 0 50px rgba(204, 53, 40, 0.2); 
   position: relative;
@@ -23,7 +25,10 @@
   content: "";
   position: absolute;
   top: 8px; left: 8px; right: 8px; bottom: 8px;
-  border: 1px solid rgba(220, 179, 84, 0.4);
+  border: 1px solid transparent;
+  border-image-source: var(--gold-texture);
+  border-image-slice: 120;
+  opacity: 0.5;
   pointer-events: none;
 }
 
@@ -93,9 +98,18 @@
   border: 3px solid var(--sumi); 
   padding: 24px; 
   border-radius: 2px; 
-  background: var(--washi); 
+  background-color: var(--washi);
+  background-image:
+    linear-gradient(180deg, rgba(255, 252, 244, 0.92), rgba(234, 223, 194, 0.84)),
+    url('/japanese-paper.jpg'),
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.3), transparent 26%),
+    radial-gradient(circle at 78% 72%, rgba(147, 107, 52, 0.08), transparent 30%);
+  background-size: cover, 700px auto, auto, auto;
+  background-position: center, center, center, center;
+  background-repeat: no-repeat, repeat, no-repeat, no-repeat;
+  background-blend-mode: normal, multiply, screen, multiply;
   color: var(--sumi);
-  box-shadow: inset 0 0 30px rgba(0,0,0,0.05);
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.05), inset 0 0 0 1px rgba(130, 96, 44, 0.12);
   position: relative;
 }
 
@@ -109,16 +123,22 @@
   display: flex;
   flex-direction: row;
   gap: 12px;
-  margin-top: 18px;
+  margin-bottom: 24px;
 }
 
 .nav-button {
   width: auto;
   margin-top: 0;
   flex: 1;
-  background: rgba(244, 239, 223, 0.94);
+  background:
+    linear-gradient(rgba(244, 239, 223, 0.9), rgba(244, 239, 223, 0.9)),
+    var(--gold-texture);
+  background-size: auto, cover;
+  background-position: center, center;
   color: var(--sumi);
-  border-color: var(--kin);
+  border-color: transparent;
+  border-image-source: var(--gold-texture);
+  border-image-slice: 120;
   box-shadow: 4px 4px 0 rgba(220, 179, 84, 0.5);
 }
 
@@ -168,7 +188,21 @@ h1 {
   margin: 0 0 4px; 
   font-size: 1.8rem; 
   font-weight: 800;
-  text-shadow: 1px 1px 0 var(--kin);
+  text-shadow: 1px 1px 0 rgba(79, 49, 12, 0.24);
+}
+
+h1,
+.calendar-month,
+.deadline-date {
+  background-image:
+    linear-gradient(180deg, rgba(255, 241, 201, 0.96), rgba(173, 123, 37, 0.92)),
+    var(--gold-texture);
+  background-size: auto, cover;
+  background-position: center, center;
+  background-blend-mode: screen, multiply;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 @media (max-width: 768px) {
@@ -220,9 +254,7 @@ h1 {
   width: 48px;
   height: 48px;
   object-fit: cover;
-  border: 2px solid var(--shu);
-  border-radius: 2px;
-  background: var(--washi);
+  background: rgba(0,0,0,0.0);
   flex-shrink: 0;
 }
 
@@ -230,6 +262,20 @@ h1 {
   .yokai-img {
     width: 36px;
     height: 36px;
+  }
+}
+
+.yokai-badge-label {
+  display: inline-block;
+  font-size: 1.22rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  transform: translateY(1px);
+}
+
+@media (max-width: 768px) {
+  .yokai-badge-label {
+    font-size: 0.98rem;
   }
 }
 
@@ -242,7 +288,13 @@ h1 {
 }
 
 .summary-item {
-  border: 2px solid rgba(26, 21, 21, 0.2);
+  border: 2px solid transparent;
+  border-image-source: linear-gradient(
+    135deg,
+    rgba(220, 179, 84, 0.55),
+    rgba(135, 96, 30, 0.45)
+  );
+  border-image-slice: 1;
   background: rgba(220, 179, 84, 0.14);
   padding: 14px 16px;
   display: grid;
@@ -332,7 +384,9 @@ button:hover {
   margin-top: 24px; 
   border-radius: 0; 
   background: var(--sumi); 
-  border: 2px solid var(--kin); 
+  border: 2px solid transparent;
+  border-image-source: var(--gold-texture);
+  border-image-slice: 120;
   padding: 16px; 
   position: relative; 
   color: var(--washi);
@@ -340,10 +394,12 @@ button:hover {
 
 .smoke { 
   font-size: 0.85rem; 
-  color: var(--kin); 
+  color: #e8c76d; 
   letter-spacing: 0.3em; 
   margin-bottom: 12px; 
-  border-bottom: 1px solid rgba(220, 179, 84, 0.3);
+  border-bottom: 1px solid transparent;
+  border-image-source: var(--gold-texture);
+  border-image-slice: 120;
   padding-bottom: 8px;
 }
 
@@ -364,7 +420,9 @@ button:hover {
   width: 120px;
   height: 120px;
   object-fit: cover;
-  border: 3px solid var(--kin);
+  border: 3px solid transparent;
+  border-image-source: var(--gold-texture);
+  border-image-slice: 120;
   border-radius: 4px;
   background: var(--washi);
   filter: drop-shadow(0 0 8px var(--shu));
@@ -381,8 +439,9 @@ button:hover {
   margin: 0;
   font-weight: 800;
   color: var(--shu);
-  font-size: 1.2rem;
-  letter-spacing: 0.1em;
+  font-size: 1.32rem;
+  letter-spacing: 0.03em;
+  line-height: 1.15;
 }
 
 .result h2 { 
@@ -422,9 +481,15 @@ button:hover {
   width: auto;
   margin-top: 0;
   padding: 12px 16px;
-  background: rgba(244, 239, 223, 0.92);
+  background:
+    linear-gradient(rgba(244, 239, 223, 0.9), rgba(244, 239, 223, 0.9)),
+    var(--gold-texture);
+  background-size: auto, cover;
+  background-position: center, center;
   color: var(--sumi);
-  border-color: var(--kin);
+  border-color: transparent;
+  border-image-source: var(--gold-texture);
+  border-image-slice: 120;
   box-shadow: 3px 3px 0 rgba(220, 179, 84, 0.5);
 }
 
@@ -495,8 +560,12 @@ button:hover {
 .calendar-count {
   font-size: 0.75rem;
   font-weight: 800;
-  color: var(--kin);
-  background: var(--sumi);
+  color: #4a3008;
+  background-image:
+    linear-gradient(rgba(255, 234, 178, 0.86), rgba(214, 165, 74, 0.82)),
+    var(--gold-texture);
+  background-size: auto, cover;
+  background-position: center, center;
   padding: 2px 8px;
 }
 

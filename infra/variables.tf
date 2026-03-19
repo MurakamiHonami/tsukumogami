@@ -37,7 +37,7 @@ variable "private_subnet_cidrs" {
 variable "backend_container_port" {
   description = "Container port for the backend service."
   type        = number
-  default     = 5001
+  default     = 5002
 }
 
 variable "frontend_container_port" {
