@@ -6,7 +6,7 @@ resource "aws_lb" "app" {
 }
 
 resource "aws_lb_target_group" "frontend" {
-  name        = "${local.name_prefix}-fe-tg"
+  name        = "${local.name_prefix}-fe-tg-${var.frontend_container_port}"
   port        = var.frontend_container_port
   protocol    = "TCP"
   target_type = "ip"
@@ -21,10 +21,14 @@ resource "aws_lb_target_group" "frontend" {
     healthy_threshold   = 2
     unhealthy_threshold = 5
   }
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_lb_target_group" "backend" {
-  name        = "${local.name_prefix}-be-tg"
+  name        = "${local.name_prefix}-be-tg-${var.backend_container_port}"
   port        = var.backend_container_port
   protocol    = "TCP"
   target_type = "ip"
@@ -38,6 +42,10 @@ resource "aws_lb_target_group" "backend" {
     timeout             = 5
     healthy_threshold   = 2
     unhealthy_threshold = 5
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
