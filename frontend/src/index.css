@@ -8,6 +8,7 @@
   --washi: #f4efdf;     /* 古い和紙 */
   --ruri: #2a4b7c;      /* 瑠璃色 */
   --murasaki: #5c3066;  /* 妖しい紫 */
+  --gold-texture: url('/metallic-gold-background.jpg');
 
   color-scheme: dark light;
   font-family: 'Shippori Mincho', 'Yu Mincho', 'Hiragino Mincho ProN', 'Noto Serif JP', serif;
