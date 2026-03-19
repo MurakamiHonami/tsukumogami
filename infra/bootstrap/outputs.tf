@@ -10,7 +10,7 @@ output "terraform_lock_table" {
 
 output "backend_config_example" {
   description = "Suggested backend.hcl contents for the main infra stack."
-  value = <<EOF
+  value       = <<EOF
 bucket         = "${aws_s3_bucket.tfstate.bucket}"
 key            = "infra/terraform.tfstate"
 region         = "${var.aws_region}"
