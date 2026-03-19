@@ -77,7 +77,8 @@ GitHub Actions workflows are configured for:
 - frontend lint and build checks
 - backend dependency install and import checks
 - Terraform plan on pull requests
-- manual Terraform apply after review
+- Terraform plan on merges to `main`
+- Terraform apply after review on merges to `main`
 
 ### Merge protection
 
@@ -120,7 +121,7 @@ For list and map variables, store valid Terraform/HCL values in the secret, for 
 
 ### Pull request Terraform plan
 
-When a pull request changes files under `infra/`, GitHub Actions will:
+When a pull request targets `main`, GitHub Actions will:
 
 1. run `terraform fmt`
 2. run `terraform init`
@@ -130,12 +131,18 @@ When a pull request changes files under `infra/`, GitHub Actions will:
 
 ### Review before apply
 
-Use the `Terraform Apply` workflow from the GitHub Actions UI.
+When code is merged into `main`, the `Terraform Deploy` workflow will:
 
-For a true review gate before apply:
+1. run `terraform plan`
+2. upload the reviewed plan artifact from that workflow run
+3. pause before `terraform apply` at the GitHub Environment gate
+4. wait for a reviewer to approve the `terraform-apply` environment
+5. apply the exact reviewed plan artifact after approval
+
+To make this work as an approval gate:
 
 1. create a GitHub Environment named `terraform-apply`
 2. add required reviewers to that environment
-3. run the workflow manually
-4. review the plan job output
-5. approve the environment-protected apply job
+3. merge into `main`
+4. review the `Terraform Plan` job output in the `Terraform Deploy` workflow
+5. approve the `Terraform Apply` job
