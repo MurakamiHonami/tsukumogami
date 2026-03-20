@@ -63,7 +63,7 @@ jobs:
           SECRET_CODESTAR_CONNECTION_NAME: ${{ secrets.TF_VAR_CODESTAR_CONNECTION_NAME }}
           SECRET_TAGS: ${{ secrets.TF_VAR_TAGS }}
           SECRET_TF_VAR_APP_DOMAIN_NAME: ${{ secrets.TF_VAR_APP_DOMAIN_NAME }}
-          SECRET_VAR_ROUTE53_ZONE_NAME: ${{ secrets.TF_VAR_ROUTE53_ZONE_NAME }} 
+          SECRET_TF_VAR_ROUTE53_ZONE_NAME: ${{ secrets.TF_VAR_ROUTE53_ZONE_NAME }}
         shell: bash
         run: |
           export_if_set() {
@@ -91,7 +91,7 @@ jobs:
           export_if_set TF_VAR_codestar_connection_name "$SECRET_CODESTAR_CONNECTION_NAME"
           export_if_set TF_VAR_tags "$SECRET_TAGS"
           export_if_set TF_VAR_app_domain_name "$SECRET_TF_VAR_APP_DOMAIN_NAME"
-          export_if_set TF_VAR_route53_zone_name "$SECRET_VAR_ROUTE53_ZONE_NAME"
+          export_if_set TF_VAR_route53_zone_name "$SECRET_TF_VAR_ROUTE53_ZONE_NAME"
       - name: Write backend config
         working-directory: ${{ env.TF_WORKING_DIR }}
         shell: bash
@@ -303,7 +303,7 @@ jobs:
           SECRET_CODESTAR_CONNECTION_NAME: ${{ secrets.TF_VAR_CODESTAR_CONNECTION_NAME }}
           SECRET_TAGS: ${{ secrets.TF_VAR_TAGS }}
           SECRET_TF_VAR_APP_DOMAIN_NAME: ${{ secrets.TF_VAR_APP_DOMAIN_NAME }}
-          SECRET_VAR_ROUTE53_ZONE_NAME: ${{ secrets.TF_VAR_ROUTE53_ZONE_NAME }}
+          SECRET_TF_VAR_ROUTE53_ZONE_NAME: ${{ secrets.TF_VAR_ROUTE53_ZONE_NAME }}
         shell: bash
         run: |
           export_if_set() {
@@ -331,7 +331,7 @@ jobs:
           export_if_set TF_VAR_codestar_connection_name "$SECRET_CODESTAR_CONNECTION_NAME"
           export_if_set TF_VAR_tags "$SECRET_TAGS"
           export_if_set TF_VAR_app_domain_name "$SECRET_TF_VAR_APP_DOMAIN_NAME"
-          export_if_set TF_VAR_route53_zone_name "$SECRET_VAR_ROUTE53_ZONE_NAME"
+          export_if_set TF_VAR_route53_zone_name "$SECRET_TF_VAR_ROUTE53_ZONE_NAME"
 
       - name: Write backend config
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -352,6 +352,30 @@ jobs:
       - name: Terraform init
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init -input=false -backend-config=backend.hcl
+
+      - name: Detect infrastructure drift before apply
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        shell: bash
+        run: |
+          set +e
+          terraform plan \
+            -input=false \
+            -refresh-only \
+            -detailed-exitcode \
+            -no-color > drift-check.txt
+          exit_code=$?
+          set -e
+
+          if [ "$exit_code" -eq 1 ]; then
+            cat drift-check.txt
+            exit 1
+          fi
+
+          if [ "$exit_code" -eq 2 ]; then
+            cat drift-check.txt
+            echo "Infrastructure drift was detected after the reviewed plan was created. Re-run the workflow to generate a fresh plan before apply."
+            exit 1
+          fi
 
       - name: Download reviewed plan artifact
         uses: actions/download-artifact@v4
