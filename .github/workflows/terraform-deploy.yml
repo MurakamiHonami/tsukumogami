@@ -62,6 +62,8 @@ jobs:
           SECRET_PIPELINE_BRANCH: ${{ secrets.TF_VAR_PIPELINE_BRANCH }}
           SECRET_CODESTAR_CONNECTION_NAME: ${{ secrets.TF_VAR_CODESTAR_CONNECTION_NAME }}
           SECRET_TAGS: ${{ secrets.TF_VAR_TAGS }}
+          SECRET_TF_VAR_APP_DOMAIN_NAME: ${{ secrets.TF_VAR_APP_DOMAIN_NAME }}
+          SECRET_VAR_ROUTE53_ZONE_NAME: ${{ secrets.TF_VAR_ROUTE53_ZONE_NAME }} 
         shell: bash
         run: |
           export_if_set() {
@@ -88,7 +90,8 @@ jobs:
           export_if_set TF_VAR_pipeline_branch "$SECRET_PIPELINE_BRANCH"
           export_if_set TF_VAR_codestar_connection_name "$SECRET_CODESTAR_CONNECTION_NAME"
           export_if_set TF_VAR_tags "$SECRET_TAGS"
-
+          export_if_set TF_VAR_app_domain_name "$SECRET_TF_VAR_APP_DOMAIN_NAME"
+          export_if_set TF_VAR_route53_zone_name "$SECRET_VAR_ROUTE53_ZONE_NAME"
       - name: Write backend config
         working-directory: ${{ env.TF_WORKING_DIR }}
         shell: bash
@@ -299,6 +302,8 @@ jobs:
           SECRET_PIPELINE_BRANCH: ${{ secrets.TF_VAR_PIPELINE_BRANCH }}
           SECRET_CODESTAR_CONNECTION_NAME: ${{ secrets.TF_VAR_CODESTAR_CONNECTION_NAME }}
           SECRET_TAGS: ${{ secrets.TF_VAR_TAGS }}
+          SECRET_TF_VAR_APP_DOMAIN_NAME: ${{ secrets.TF_VAR_APP_DOMAIN_NAME }}
+          SECRET_VAR_ROUTE53_ZONE_NAME: ${{ secrets.TF_VAR_ROUTE53_ZONE_NAME }}
         shell: bash
         run: |
           export_if_set() {
@@ -325,6 +330,8 @@ jobs:
           export_if_set TF_VAR_pipeline_branch "$SECRET_PIPELINE_BRANCH"
           export_if_set TF_VAR_codestar_connection_name "$SECRET_CODESTAR_CONNECTION_NAME"
           export_if_set TF_VAR_tags "$SECRET_TAGS"
+          export_if_set TF_VAR_app_domain_name "$SECRET_TF_VAR_APP_DOMAIN_NAME"
+          export_if_set TF_VAR_route53_zone_name "$SECRET_VAR_ROUTE53_ZONE_NAME"
 
       - name: Write backend config
         working-directory: ${{ env.TF_WORKING_DIR }}
