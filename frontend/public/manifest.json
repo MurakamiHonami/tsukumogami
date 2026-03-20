@@ -1,0 +1,23 @@
+{
+  "short_name": "付喪神",
+  "name": "付喪神 交換期限通知アプリ",
+  "description": "物の交換期限をプッシュ通知するアプリです",
+  "icons": [
+    {
+      "src": "icon.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "purpose": "any"
+    },
+    {
+      "src": "icon512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff"
+}

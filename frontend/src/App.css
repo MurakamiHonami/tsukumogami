@@ -40,7 +40,8 @@
 }
 
 .scene { 
-  display: flex; 
+  display: flex;
+  flex-direction: column;
   align-items: center; 
   justify-content: space-between; 
   margin-bottom: 24px; 
