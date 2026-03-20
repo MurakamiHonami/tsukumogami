@@ -15,7 +15,7 @@ function CalendarPage({ calendarMonth, itemsByDate, monthlyEntries, savedEntries
     <div className="calendar-page">
       <PageHeader
         title="交換期限カレンダー"
-        subtitle="登録した食材や食品を月ごとに確認できる、妖怪たちの見張り帳です。"
+        subtitle="登録した物品の交換期限を月ごとに確認できます。"
         badge={{
           items: [...headerBadges, { variant: 'count', label: `登録 ${savedEntries.length} 件` }],
         }}
@@ -32,7 +32,7 @@ function CalendarPage({ calendarMonth, itemsByDate, monthlyEntries, savedEntries
       </div>
 
       {savedEntries.length === 0 ? (
-        <div className="empty-state">登録データがまだありません。まずは食材を登録してカレンダーを表示しましょう。</div>
+        <div className="empty-state">登録データがまだありません。まずは物品を登録してカレンダーを表示しましょう。</div>
       ) : (
         <div className="calendar-layout">
           <CalendarGrid calendarMonth={calendarMonth} itemsByDate={itemsByDate} />
