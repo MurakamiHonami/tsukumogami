@@ -77,8 +77,30 @@ function RegisterForm({
   return (
     <div className="form">
       <label>バーコード(JAN)</label>
+      <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3', backgroundColor: '#000' }}>
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      </div>
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <button
+        onClick={captureAndSend}
+        disabled={isScanning}
+        style={{
+          marginTop: '20px',
+          padding: '12px 24px',
+          fontSize: '16px',
+          cursor: isScanning ? 'not-allowed' : 'pointer',
+        }}
+      >
+        {isScanning ? '読み取り中...' : 'バーコードを撮影'}
+      </button>
+
       <input
-        value={barcode}
+        value={barcode || result?.barcode || ''}
         onChange={(event) => onBarcodeChange(event.target.value)}
         placeholder="例: 4901234567896"
       />
