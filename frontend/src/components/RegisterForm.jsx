@@ -1,7 +1,4 @@
-import { BrowserMultiFormatReader } from '@zxing/browser';
-import React, { useState, useEffect, useRef } from 'react';
-
-const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
+import { useRef } from 'react';
 
 function RegisterForm({
   barcode,
@@ -12,88 +9,71 @@ function RegisterForm({
   onPurchaseDateChange,
   onSubmit,
 }) {
-const videoRef = useRef(null);
+  console.log("RegisterForm読み込まれた");
+
+  const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  
-  const [result, setResult] = useState(null);
-  const [err, setError] = useState(null);
-  const [isScanning, setIsScanning] = useState(false);
 
-  useEffect(() => {
-    let stream = null;
+  // カメラ起動
+  const startCamera = async () => {
+    console.log("カメラ起動");
 
-    const startCamera = async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (err) {
-        console.error('カメラの起動に失敗しました:', err);
-        setError('カメラのアクセスが許可されていないか、デバイスが見つかりません。');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      console.log("取得成功");
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
       }
-    };
+    } catch (err) {
+      console.error("カメラエラー", err);
+    }
+  };
 
-    startCamera();
+  // 撮影して送信
+  const captureAndSend = async () => {
+    console.log("撮影ボタン押された");
 
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, []);
-  const captureAndSend = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    setIsScanning(true);
-    setResult(null);
-    setError(null);
-
-    const video = videoRef.current;
     const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
+    const video = videoRef.current;
 
+    if (!video || !video.videoWidth) {
+      console.log("まだカメラ準備できてない");
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
+    ctx.drawImage(video, 0, 0);
 
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageSrc = canvas.toDataURL('image/png');
+    console.log("画像取得OK");
 
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        setError('画像の生成に失敗しました。');
-        setIsScanning(false);
-        return;
+    try {
+      const response = await fetch('/api/scan-barcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imageSrc }),
+      });
+
+      console.log("API送信OK", response);
+
+      const data = await response.json();
+      console.log("結果", data);
+
+      if (data.code) {
+        onBarcodeChange(data.code);
+      } else {
+        console.log("コードが取得できなかった");
       }
-
-      const formData = new FormData();
-      formData.append('image', blob, 'barcode.jpg');
-
-      try {
-        const response = await fetch(`${API_BASE}/api/scan-barcode`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          setResult(data);
-          const barcodeValue = data.barcode || '';
-          onBarcodeChange(barcodeValue);
-        } else {
-          setError(data.detail || 'バーコードの読み取りに失敗しました。');
-        }
-      } catch (err) {
-        console.error('通信エラー:', err);
-        setError('サーバーとの通信に失敗しました。');
-      } finally {
-        setIsScanning(false);
-      }
-    }, 'image/jpeg', 0.8);
+    } catch (err) {
+      console.error("送信エラー", err);
+    }
   };
+
   return (
     <div className="form">
       <label>バーコード(JAN)</label>
@@ -124,19 +104,38 @@ const videoRef = useRef(null);
         onChange={(event) => onBarcodeChange(event.target.value)}
         placeholder="例: 4901234567896"
       />
+
+      {/* カメラ起動 */}
+      <button type="button" onClick={startCamera}>
+        カメラ起動
+      </button>
+
+      {/* 撮影 */}
+      <button type="button" onClick={captureAndSend}>
+        撮影して送信
+      </button>
+
+      {/* カメラ映像 */}
+      <video ref={videoRef} style={{ width: '100%' }} />
+
+      {/* 非表示canvas */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+
       <label>購入日</label>
       <input
         type="date"
         value={purchaseDate}
         onChange={(event) => onPurchaseDateChange(event.target.value)}
       />
+
       <button type="button" onClick={onSubmit}>
         物品を登録
       </button>
+
       {status && <div className="status"> {status}</div>}
       {error && <div className="error"> {error}</div>}
     </div>
-  )
+  );
 }
 
-export default RegisterForm
+export default RegisterForm;
