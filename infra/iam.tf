@@ -134,7 +134,7 @@ data "aws_iam_policy_document" "codebuild_policy" {
   }
 
   statement {
-    actions = ["cloudfront:CreateInvalidation"]
+    actions   = ["cloudfront:CreateInvalidation"]
     resources = [aws_cloudfront_distribution.frontend.arn]
   }
 }
