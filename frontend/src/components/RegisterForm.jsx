@@ -69,6 +69,8 @@ function RegisterForm({
     canvas.height = video.videoHeight
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
+
+    
     canvas.toBlob(async (blob) => {
       if (!blob) {
         setCameraError('画像の生成に失敗しました。')
