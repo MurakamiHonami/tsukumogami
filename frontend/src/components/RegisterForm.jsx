@@ -1,4 +1,6 @@
-import { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react'
+
+const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
 
 function RegisterForm({
   barcode,
@@ -9,75 +11,101 @@ function RegisterForm({
   onPurchaseDateChange,
   onSubmit,
 }) {
-  console.log("RegisterForm読み込まれた");
+  const videoRef = useRef(null)
+  const canvasRef = useRef(null)
+  const streamRef = useRef(null)
 
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
+  const [result, setResult] = useState(null)
+  const [cameraError, setCameraError] = useState('')
+  const [isScanning, setIsScanning] = useState(false)
+  const [isCameraActive, setIsCameraActive] = useState(false)
 
-  // カメラ起動
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop())
+        streamRef.current = null
+      }
+    }
+  }, [])
+
   const startCamera = async () => {
-    console.log("カメラ起動");
+    if (streamRef.current) {
+      setIsCameraActive(true)
+      return
+    }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      console.log("取得成功");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      })
+
+      streamRef.current = stream
 
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.srcObject = stream
       }
+
+      setCameraError('')
+      setIsCameraActive(true)
     } catch (err) {
-      console.error("カメラエラー", err);
+      console.error('カメラの起動に失敗しました:', err)
+      setCameraError('カメラの利用が許可されていないか、デバイスが見つかりません。')
     }
-  };
+  }
 
-  // 撮影して送信
-  const captureAndSend = async () => {
-    console.log("撮影ボタン押された");
+  const captureAndSend = () => {
+    if (!videoRef.current || !canvasRef.current) return
 
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
+    setIsScanning(true)
+    setResult(null)
+    setCameraError('')
 
-    if (!video || !video.videoWidth) {
-      console.log("まだカメラ準備できてない");
-      return;
-    }
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    const context = canvas.getContext('2d')
 
-    const ctx = canvas.getContext('2d');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-    ctx.drawImage(video, 0, 0);
-
-    const imageSrc = canvas.toDataURL('image/png');
-    console.log("画像取得OK");
-
-    try {
-      const response = await fetch('/api/scan-barcode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: imageSrc }),
-      });
-
-      console.log("API送信OK", response);
-
-      const data = await response.json();
-      console.log("結果", data);
-
-      if (data.code) {
-        onBarcodeChange(data.code);
-      } else {
-        console.log("コードが取得できなかった");
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        setCameraError('画像の生成に失敗しました。')
+        setIsScanning(false)
+        return
       }
-    } catch (err) {
-      console.error("送信エラー", err);
-    }
-  };
+
+      const formData = new FormData()
+      formData.append('image', blob, 'barcode.jpg')
+
+      try {
+        const response = await fetch(`${API_BASE}/api/scan-barcode`, {
+          method: 'POST',
+          body: formData,
+        })
+
+        const data = await response.json()
+
+        if (response.ok) {
+          setResult(data)
+          onBarcodeChange(data.barcode || '')
+        } else {
+          setCameraError(data.detail || 'バーコードの読み取りに失敗しました。')
+        }
+      } catch (err) {
+        console.error('通信エラー:', err)
+        setCameraError('サーバーとの通信に失敗しました。')
+      } finally {
+        setIsScanning(false)
+      }
+    }, 'image/jpeg', 0.8)
+  }
 
   return (
     <div className="form">
       <label>バーコード(JAN)</label>
-      <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3', backgroundColor: '#000' }}>
+      <div style={{ position: 'relative', width: '100%', aspectRatio: '4 / 3', backgroundColor: '#000' }}>
         <video
           ref={videoRef}
           autoPlay
@@ -87,13 +115,26 @@ function RegisterForm({
       </div>
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       <button
-        onClick={captureAndSend}
-        disabled={isScanning}
+        type="button"
+        onClick={startCamera}
         style={{
           marginTop: '20px',
           padding: '12px 24px',
           fontSize: '16px',
-          cursor: isScanning ? 'not-allowed' : 'pointer',
+          cursor: 'pointer',
+        }}
+      >
+        {isCameraActive ? 'カメラ起動中' : 'カメラを起動'}
+      </button>
+      <button
+        type="button"
+        onClick={captureAndSend}
+        disabled={!isCameraActive || isScanning}
+        style={{
+          marginTop: '12px',
+          padding: '12px 24px',
+          fontSize: '16px',
+          cursor: !isCameraActive || isScanning ? 'not-allowed' : 'pointer',
         }}
       >
         {isScanning ? '読み取り中...' : 'バーコードを撮影'}
@@ -104,38 +145,19 @@ function RegisterForm({
         onChange={(event) => onBarcodeChange(event.target.value)}
         placeholder="例: 4901234567896"
       />
-
-      {/* カメラ起動 */}
-      <button type="button" onClick={startCamera}>
-        カメラ起動
-      </button>
-
-      {/* 撮影 */}
-      <button type="button" onClick={captureAndSend}>
-        撮影して送信
-      </button>
-
-      {/* カメラ映像 */}
-      <video ref={videoRef} style={{ width: '100%' }} />
-
-      {/* 非表示canvas */}
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-
       <label>購入日</label>
       <input
         type="date"
         value={purchaseDate}
         onChange={(event) => onPurchaseDateChange(event.target.value)}
       />
-
       <button type="button" onClick={onSubmit}>
-        物品を登録
+        期限を登録
       </button>
-
-      {status && <div className="status"> {status}</div>}
-      {error && <div className="error"> {error}</div>}
+      {status && <div className="status">{status}</div>}
+      {(error || cameraError) && <div className="error">{error || cameraError}</div>}
     </div>
-  );
+  )
 }
 
-export default RegisterForm;
+export default RegisterForm
