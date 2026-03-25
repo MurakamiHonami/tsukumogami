@@ -1289,8 +1289,16 @@ button:hover {
   .calendar-yokai-events {
     grid-template-columns: repeat(1, minmax(0, 1fr));
     gap: 4px;
-    max-width: 30px;
+    max-width: 5vh;
   }
+
+  @media (max-width: 480px) {
+    .calendar-yokai-events {
+      width: 3vh;
+    }
+    
+  }
+  
 
   .calendar-yokai-button {
     padding: 4px;
