@@ -27,7 +27,7 @@ CORS(
     },
 )
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://app.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -39,8 +39,8 @@ class APIError(Exception):
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    task_name = db.Column(db.string(100), nullable=False)
-    task_date = db.column(db.DataTime, default=lambda: datetime.now(timezone.utc))
+    task_name = db.Column(db.String(100), nullable=False)
+    task_date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     task_is_done = db.Column(db.Boolean, default=False, nullable=False)
 
     def to_dict(self):

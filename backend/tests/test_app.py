@@ -1,7 +1,9 @@
+### python -m pytest -v ###
+
 import io
 import pytest
 from datetime import date
-from app import guess_category, estimate_expiration_date, app
+from app import guess_category, estimate_expiration_date, app, db, Task
 from unittest.mock import patch
 from collections import namedtuple
 
@@ -23,9 +25,47 @@ def test_estimate_expiration_date():
 
 @pytest.fixture
 def client():
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
     app.config["TESTING"] = True
     with app.test_client() as client:
-        yield client
+        with app.app_context():
+            
+            db.create_all()
+            yield client
+
+            db.session.remove()
+            db.drop_all()
+
+def test_get_tasks_empty(client):
+    response = client.get("/api/tasks")
+    assert response.status_code == 200
+    assert response.get_json == []
+
+def test_create_task_success(client):
+    response = client.post("/api/tasks", json={"task_name": "ハッカソン"})
+
+    assert response.status.code == 201
+    data = response.get_json()
+    assert data["task_name"] == "ハッカソン"
+    assert data["task_is_done"] is False
+
+def test_create_task_invalid(client):
+    response = client.post("/api/tasks", json={"wrong_key": "テスト"})
+    assert response.status_code == 400
+    assert "detail" in response.get_json()
+
+def task_change_task_done(client):
+    post_response = client.post("/api/tasks", json={"task_name": "ヤッタスク"})
+    task_id = post_response.get_json()["id"]
+
+    put_response = client.put(f"/api/tasks/{task_id}/done")
+    assert put_response.status_code == 200
+    assert put_response.get_json()["task_is_done"] is True
+
+def test_change_task_done_not_found(client):
+    response = client.put("/api/tasks/999/done")
+    assert response.status_code == 404
+
 
 def test_health_endpoint(client):
     response = client.get("/health")
