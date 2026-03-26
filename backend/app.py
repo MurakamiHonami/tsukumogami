@@ -3,9 +3,10 @@ import cv2
 import numpy as np
 import requests
 from pyzbar.pyzbar import decode
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime, timezone
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
+from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 
 load_dotenv()
@@ -26,12 +27,28 @@ CORS(
     },
 )
 
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
 class APIError(Exception):
     def __init__(self, status_code: int, detail: str) -> None:
         super().__init__(detail)
         self.status_code = status_code
         self.detail = detail
+
+class Task(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    task_name = db.Column(db.String(100), nullable=False)
+    task_date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    task_is_done = db.Column(db.Boolean, default=False, nullable=False)
+
+    def to_dict(self):
+        return {
+            "task_name": self.task_name,
+            "task_date": self.task_date.isoformat() if self.task_date else None,
+            "task_is_done": self.task_is_done
+        }
 
 
 @app.errorhandler(APIError)
@@ -209,6 +226,41 @@ def root():
 @app.get("/health")
 def health():
     return jsonify({"status": "ok"})
+
+##リクエストに対してデータベースを'全件'返す（要修正)
+@app.get("/api/tasks") 
+def get_tasks():
+    tasks = Task.query.all()
+    result = [task.to_dict() for task in tasks]
+
+    return jsonify(result)
+
+##特定のタスクのリクエストに対して、そのリクエストのis_doneを完了(True)にして返す
+@app.put("/api/tasks/<int:task_id>/done")
+def change_task_done(task_id):
+    task = db.session.get(Task, task_id)
+    if not task:
+        return jsonify({"detail": "The expected task is not found"}), 404
+    
+    task.task_is_done = True
+    
+    db.session.commit()
+    
+    return jsonify(task.to_dict())
+
+##フロントエンドからタスクをデータベースに登録する
+@app.post("/api/tasks")
+def create_task():
+    data = request.get_json()
+    if not data or "task_name" not in data:
+        return jsonify({"detail": "Please contain the item 'task_name'"}), 400
+    
+    new_task = Task(task_name=data["task_name"])
+
+    db.session.add(new_task)
+    db.session.commit()
+
+    return jsonify(new_task.to_dict()), 201
 
 
 @app.post("/api/estimate")
