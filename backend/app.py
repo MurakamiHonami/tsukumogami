@@ -227,6 +227,41 @@ def root():
 def health():
     return jsonify({"status": "ok"})
 
+##リクエストに対してデータベースを'全件'返す（要修正)
+@app.get("/api/tasks") 
+def get_tasks():
+    tasks = Task.query.all()
+    result = [task.to_dict() for task in tasks]
+
+    return jsonify(result)
+
+##特定のタスクのリクエストに対して、そのリクエストのis_doneを完了(True)にして返す
+@app.put("/api/tasks/<int:task_id>/done")
+def change_task_done(task_id):
+    task = Task.query.get(task_id)
+    if not task:
+        return jsonify({"detail": "The expected task is not found"}), 404
+    
+    task.task_is_done = True
+    
+    db.session.commit()
+    
+    return jsonify(task.to_dict())
+
+##フロントエンドからタスクをデータベースに登録する
+@app.post("/api/tasks/register")
+def create_task():
+    data = request.get_json()
+    if not data or "task_name" not in data:
+        return jsonify({"detail": "Please contain the item 'task_name'"}), 400
+    
+    new_task = Task(task_name=data["task_name"])
+
+    db.session.add(new_task)
+    db.session.commit()
+
+    return jsonify(new_task.to_dict()), 201
+
 
 @app.post("/api/estimate")
 def estimate():
