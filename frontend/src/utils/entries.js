@@ -62,3 +62,45 @@ export function getUpcomingEntry(savedEntries) {
     .filter((entry) => !entry.completed)
     .sort((left, right) => left.suggestedExpiration.localeCompare(right.suggestedExpiration))[0]
 }
+
+export function getYokaiDex(savedEntries) {
+  const statsByYokai = savedEntries.reduce((accumulator, entry) => {
+    const yokai = getEntryYokai(entry)
+    const current = accumulator[yokai] ?? {
+      yokai,
+      encountered: false,
+      totalCount: 0,
+      completedCount: 0,
+      pendingCount: 0,
+      latestProductName: null,
+      latestEncounterDate: null,
+    }
+
+    current.encountered = true
+    current.totalCount += 1
+    current.completedCount += entry.completed ? 1 : 0
+    current.pendingCount += entry.completed ? 0 : 1
+    current.latestProductName = entry.productName ?? current.latestProductName
+    current.latestEncounterDate = entry.suggestedExpiration ?? current.latestEncounterDate
+
+    accumulator[yokai] = current
+    return accumulator
+  }, {})
+
+  return yokaiList.map((yokai) => {
+    const stats = statsByYokai[yokai]
+    if (stats) {
+      return stats
+    }
+
+    return {
+      yokai,
+      encountered: false,
+      totalCount: 0,
+      completedCount: 0,
+      pendingCount: 0,
+      latestProductName: null,
+      latestEncounterDate: null,
+    }
+  })
+}

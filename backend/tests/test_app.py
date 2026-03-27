@@ -55,6 +55,33 @@ def test_get_tasks_empty(client):
     assert response.get_json() == []
 
 
+def test_register_and_login_success(client):
+    register_response = client.post(
+        "/api/auth/register",
+        json={"username": "alice", "password": "pass12345"},
+    )
+    assert register_response.status_code == 201
+    registered_user = register_response.get_json()
+    assert registered_user["username"] == "alice"
+    assert registered_user["id"] > 0
+
+    login_response = client.post(
+        "/api/auth/login",
+        json={"username": "alice", "password": "pass12345"},
+    )
+    assert login_response.status_code == 200
+    logged_in_user = login_response.get_json()
+    assert logged_in_user["id"] == registered_user["id"]
+    assert logged_in_user["username"] == "alice"
+
+
+def test_register_duplicate_username(client):
+    client.post("/api/auth/register", json={"username": "alice", "password": "pass12345"})
+    response = client.post("/api/auth/register", json={"username": "alice", "password": "pass12345"})
+
+    assert response.status_code == 409
+
+
 def test_create_task_success(client):
     response = client.post("/api/tasks", json=build_task_payload())
 
@@ -83,6 +110,29 @@ def test_get_tasks_returns_created_task(client):
     data = response.get_json()
     assert len(data) == 1
     assert data[0]["product_name"] == "Emergency Battery Pack"
+
+
+def test_tasks_are_scoped_by_user(client):
+    user1 = client.post("/api/auth/register", json={"username": "alice", "password": "pass12345"}).get_json()
+    user2 = client.post("/api/auth/register", json={"username": "bob", "password": "pass12345"}).get_json()
+
+    client.post("/api/tasks", json=build_task_payload(), headers={"X-User-Id": str(user1["id"])})
+    client.post(
+        "/api/tasks",
+        json={**build_task_payload(), "product_name": "Another Product"},
+        headers={"X-User-Id": str(user2["id"])},
+    )
+
+    response_user1 = client.get("/api/tasks", headers={"X-User-Id": str(user1["id"])})
+    response_user2 = client.get("/api/tasks", headers={"X-User-Id": str(user2["id"])})
+    response_guest = client.get("/api/tasks")
+
+    assert response_user1.status_code == 200
+    assert response_user2.status_code == 200
+    assert response_guest.status_code == 200
+    assert len(response_user1.get_json()) == 1
+    assert len(response_user2.get_json()) == 1
+    assert response_guest.get_json() == []
 
 
 def test_change_task_done_success(client):

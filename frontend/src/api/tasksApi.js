@@ -1,5 +1,13 @@
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
 
+function buildUserHeaders(userId) {
+  if (!userId) {
+    return {}
+  }
+
+  return { 'X-User-Id': String(userId) }
+}
+
 function toEntry(task) {
   return {
     id: task.id,
@@ -20,8 +28,10 @@ async function parseJson(response) {
   return response.json().catch(() => ({}))
 }
 
-export async function fetchTasks() {
-  const response = await fetch(`${API_BASE}/api/tasks`)
+export async function fetchTasks(userId) {
+  const response = await fetch(`${API_BASE}/api/tasks`, {
+    headers: buildUserHeaders(userId),
+  })
   const body = await parseJson(response)
 
   if (!response.ok) {
@@ -31,10 +41,10 @@ export async function fetchTasks() {
   return Array.isArray(body) ? body.map(toEntry) : []
 }
 
-export async function createTask({ barcode, purchaseDate, estimate, yokai }) {
+export async function createTask({ barcode, purchaseDate, estimate, yokai, userId }) {
   const response = await fetch(`${API_BASE}/api/tasks`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...buildUserHeaders(userId) },
     body: JSON.stringify({
       barcode,
       purchase_date: purchaseDate,
@@ -55,9 +65,10 @@ export async function createTask({ barcode, purchaseDate, estimate, yokai }) {
   return toEntry(body)
 }
 
-export async function completeTask(taskId) {
+export async function completeTask(taskId, userId) {
   const response = await fetch(`${API_BASE}/api/tasks/${taskId}/done`, {
     method: 'PUT',
+    headers: buildUserHeaders(userId),
   })
 
   const body = await parseJson(response)

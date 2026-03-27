@@ -71,6 +71,15 @@ function CalendarGrid({ calendarMonth, itemsByDate, focusDate, onEntryComplete }
     setSelectedEntry(null)
   }
 
+  const getEntryImageSrc = (entry) => {
+    if (entry.productImage) {
+      return entry.productImage
+    }
+
+    const yokai = getEntryYokai(entry)
+    return `/${yokaiImageMap[yokai]}`
+  }
+
   return (
     <>
       <div className="calendar-grid-wrapper">
@@ -152,26 +161,28 @@ function CalendarGrid({ calendarMonth, itemsByDate, focusDate, onEntryComplete }
               ×
             </button>
             <div className="calendar-modal-content">
-              <h3 className="calendar-modal-title">交換期限</h3>
+              <h3 className="calendar-modal-title">その他の交換期限</h3>
               <div className="calendar-overflow-list">
-                {overflowEntries.entries.map((entry) => {
-                  const yokai = getEntryYokai(entry)
-
-                  return (
-                    <button
-                      key={entry.id}
-                      type="button"
-                      className="calendar-overflow-item"
-                      onClick={() => openEntryDetails(entry)}
-                    >
-                      <img src={`/${yokaiImageMap[yokai]}`} alt={yokai} className="calendar-overflow-icon" />
-                      <div className="calendar-overflow-copy">
-                        <strong>{yokai}</strong>
-                        <span>{entry.productName}</span>
-                      </div>
-                    </button>
-                  )
-                })}
+                {overflowEntries.entries.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    className="calendar-overflow-item"
+                    onClick={() => openEntryDetails(entry)}
+                  >
+                    <div className="calendar-overflow-image-wrap">
+                      <img src={getEntryImageSrc(entry)} alt={entry.productName} className="calendar-overflow-icon" />
+                      <img
+                        src={entry.completed ? '/tassei.png' : '/mitatsu.png'}
+                        alt={entry.completed ? '達成' : '未達'}
+                        className="calendar-overflow-item-stamp"
+                      />
+                    </div>
+                    <div className="calendar-overflow-copy">
+                      <strong>{entry.productName}</strong>
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
