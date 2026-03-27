@@ -40,14 +40,101 @@
 }
 
 .scene { 
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
   align-items: center; 
   justify-content: space-between; 
   margin-bottom: 24px; 
-  border-bottom: 2px dashed var(--shu);
   padding-bottom: 16px;
   gap: 16px;
+  position: relative;
+}
+
+.auth-area {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 2;
+}
+
+.auth-user {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--sumi);
+  background: rgba(244, 239, 223, 0.9);
+  padding: 6px 10px;
+  border: 1px solid rgba(79, 49, 12, 0.2);
+}
+
+.auth-button {
+  width: auto;
+  margin-top: 0;
+  padding: 5px 9px;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+
+}
+
+.auth-modal {
+  position: relative;
+  width: min(420px, 100%);
+  padding-top: 60px;
+}
+
+.auth-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.auth-mode-button {
+  margin-top: 0;
+  width: 100%;
+  padding: 10px 8px;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  background:
+    linear-gradient(rgba(244, 239, 223, 0.9), rgba(244, 239, 223, 0.9)),
+    var(--gold-texture);
+  background-size: auto, cover;
+  background-position: center, center;
+  color: var(--sumi);
+  border-color: transparent;
+  border-image-source: var(--gold-texture);
+  border-image-slice: 120;
+  box-shadow: 3px 3px 0 rgba(220, 179, 84, 0.4);
+}
+
+.auth-mode-button.active {
+  background: var(--shu);
+  color: var(--washi);
+  border-color: var(--shu);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.auth-form {
+  display: grid;
+  gap: 10px;
+}
+
+
+
+.auth-submit-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.auth-modal-close {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  padding: 0px;
+  margin: 0px;
 }
 
 @media (max-width: 768px) {
@@ -56,54 +143,147 @@
     margin-bottom: 16px;
     padding-bottom: 12px;
   }
+
+  .auth-area {
+    top: -4px;
+    right: 0;
+  }
 }
 
 /* 不気味な朱い月 */
-.moon { 
-  width: 56px; 
-  height: 56px; 
-  border-radius: 50%; 
-  background: var(--shu); 
-  box-shadow: 0 0 40px var(--shu), inset -10px -10px 0 rgba(0,0,0,0.4);
-  flex-shrink: 0;
+
+@keyframes lanternFloat {
+  0% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  25% {
+    transform: translateY(-5px) rotate(1deg);
+  }
+  50% {
+    transform: translateY(-9px) rotate(2deg);
+  }
+  75% {
+    transform: translateY(-4px) rotate(-1deg);
+  }
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
 }
 
-@media (max-width: 768px) {
-  .moon {
-    width: 40px;
-    height: 40px;
+@keyframes lanternPulse {
+  0% {
+    opacity: 0.78;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 0.78;
+    transform: scale(0.94);
   }
 }
 
 /* 霞（かすみ）のような雲の表現 */
-.cloud { 
-  color: var(--kin); 
-  font-weight: 800; 
-  font-size: 1.1rem; 
-  letter-spacing: 0.5em; 
-  text-shadow: 2px 2px 0 var(--sumi); 
-  background: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 2px,
-    rgba(220, 179, 84, 0.15) 2px,
-    rgba(220, 179, 84, 0.15) 4px
-  );
-  padding: 4px 16px;
+h1.cloud {
+  position: relative;
+  display: inline-grid;
+  justify-items: center;
+  gap: 6px;
+  min-width: min(100%, 340px);
+  padding: 16px 28px 14px;
   text-align: center;
+  background:
+    transparent;
+  background-size: auto, 420px auto;
+  background-position: center, center;
+  background-repeat: no-repeat, repeat;
+  border: 2px solid transparent;
+  border-radius: 18px;
+  box-shadow:
+    none;
+  transform: rotate(-1deg);
+}
+
+.floating-lantern {
+  position: absolute;
+  left: -42px;
+  bottom: 18px;
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  animation: lanternFloat 3.6s ease-in-out infinite;
+  transform-origin: center top;
+  pointer-events: none;
+}
+
+
+
+
+.cloud-title {
+  display: block;
+  font-family:
+    'Shiranui',
+    'Shippori Mincho',
+    'Yu Mincho',
+    'Hiragino Mincho ProN',
+    'Noto Serif JP',
+    serif;
+  font-size: clamp(2rem, 4.3vw, 3rem);
+  line-height: 0.98;
+  letter-spacing: 0.16em;
+  color: var(--kin);
+  text-shadow:
+    0 1px 0 rgba(255, 251, 241, 0.9),
+    1px 2px 0 rgba(220, 179, 84, 0.32);
+}
+
+.cloud-subtitle {
+  display: inline-block;
+  padding: 2px 10px;
+
+  color: #8b5f2f;
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
 }
 
 @media (max-width: 768px) {
-  .cloud {
-    font-size: 0.9rem;
-    letter-spacing: 0.3em;
-    padding: 2px 8px;
+  h1.cloud {
+    gap: 4px;
+    min-width: auto;
+    padding: 12px 18px 10px;
+  }
+
+  h1.cloud::before,
+  h1.cloud::after {
+    top: 8px;
+    width: 24px;
+  }
+
+  .cloud-title {
+    font-size: clamp(1.75rem, 7vw, 2.4rem);
+    letter-spacing: 0.12em;
+  }
+
+  .cloud-subtitle {
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+  }
+
+  .floating-lantern {
+    right: 185px;
+    bottom: 18px;
+    width: 64px;
+    height: 64px;
   }
 }
 
+
 /* 御札（おふだ）風のカード */
 .card { 
-  border: 3px solid var(--sumi); 
   padding: 24px; 
   border-radius: 2px; 
   background-color: var(--washi);
@@ -122,7 +302,8 @@
 }
 
 .register-page,
-.calendar-page {
+.calendar-page,
+.dex-page {
   display: grid;
   gap: 20px;
 }
@@ -946,8 +1127,8 @@ button:hover {
 
 .calendar-modal-close {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: -17px;
+  right: -17px;
   width: auto;
   margin-top: 0;
   padding: 8px 12px;
@@ -1009,7 +1190,7 @@ button:hover {
   margin-top: 0;
   width: 100%;
   display: grid;
-  grid-template-columns: 68px minmax(0, 1fr);
+  grid-template-columns: 84px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
@@ -1019,17 +1200,39 @@ button:hover {
   background-size: auto, 280px auto;
   color: var(--sumi);
   letter-spacing: 0;
+  border: none;
+  box-shadow: 2px 2px 0 rgba(79, 49, 12, 0.3);
 }
 
 .calendar-overflow-item:hover {
   color: var(--sumi);
 }
 
+.calendar-overflow-image-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.72);
+}
+
 .calendar-overflow-icon {
   width: 100%;
   aspect-ratio: 1;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
+}
+
+.calendar-overflow-item-stamp {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  transform: rotate(18deg);
+  filter: drop-shadow(0 4px 8px rgba(62, 19, 11, 0.26));
 }
 
 .calendar-overflow-copy {
@@ -1492,6 +1695,116 @@ button:hover {
   font-weight: 800;
 }
 
+.dex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.dex-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 246, 0.96), rgba(241, 232, 208, 0.92)),
+    url('/japanese-paper.jpg');
+  background-size: auto, 520px auto;
+  border: 2px solid rgba(130, 96, 44, 0.18);
+  border-radius: 22px;
+  box-shadow:
+    0 10px 20px rgba(49, 33, 22, 0.12),
+    inset 0 0 0 1px rgba(255, 247, 230, 0.3);
+}
+
+.dex-card.is-hidden {
+  background:
+    linear-gradient(180deg, rgba(64, 58, 54, 0.94), rgba(38, 34, 31, 0.96)),
+    url('/japanese-paper.jpg');
+  background-size: auto, 520px auto;
+}
+
+.dex-card-art {
+  position: relative;
+  min-height: 168px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top, rgba(220, 179, 84, 0.18), transparent 55%),
+    linear-gradient(180deg, rgba(255, 248, 232, 0.78), rgba(235, 222, 190, 0.6));
+}
+
+.dex-card.is-hidden .dex-card-art {
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 55%),
+    linear-gradient(180deg, rgba(87, 80, 75, 0.46), rgba(58, 53, 49, 0.36));
+}
+
+.dex-card-image {
+  width: min(78%, 150px);
+  aspect-ratio: 1;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 18px rgba(49, 33, 22, 0.18));
+}
+
+.dex-card.is-hidden .dex-card-image {
+  filter: brightness(0) saturate(0) contrast(1.1) drop-shadow(0 12px 18px rgba(0, 0, 0, 0.35));
+  opacity: 0.92;
+}
+
+.dex-card-number {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 250, 240, 0.92);
+  color: #8b5f2f;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.dex-card.is-hidden .dex-card-number {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.dex-card-body {
+  display: grid;
+  gap: 10px;
+}
+
+.dex-card-name {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--shu);
+}
+
+.dex-card.is-hidden .dex-card-name {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dex-card-stats,
+.dex-card-unknown {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+  color: #4f4f4f;
+  font-size: 0.92rem;
+}
+
+.dex-card-stats p,
+.dex-card-unknown {
+  margin: 0;
+}
+
+.dex-card.is-hidden .dex-card-unknown {
+  color: rgba(255, 255, 255, 0.76);
+}
+
 .deadline-item {
   border: none;
   background: transparent;
@@ -1699,9 +2012,16 @@ button:hover {
   }
 
   .calendar-overflow-item {
-    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-columns: 68px minmax(0, 1fr);
     gap: 10px;
     padding: 8px 10px;
+  }
+
+  .calendar-overflow-item-stamp {
+    width: 42px;
+    height: 42px;
+    top: -6px;
+    right: -6px;
   }
 
   .calendar-modal-hero {

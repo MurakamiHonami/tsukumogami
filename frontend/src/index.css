@@ -1,4 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Yusei+Magic&display=swap');
+
+@font-face {
+  font-family: 'Shiranui';
+  src: url('../fonts/Shiranui-EB.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   --sumi: #1a1515;

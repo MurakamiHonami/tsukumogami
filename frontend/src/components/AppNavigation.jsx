@@ -13,7 +13,14 @@ function AppNavigation({ activePage, onPageChange }) {
         className={`nav-button ${activePage === 'calendar' ? 'active' : ''}`}
         onClick={() => onPageChange('calendar')}
       >
-        交換期限
+        カレンダー
+      </button>
+      <button
+        type="button"
+        className={`nav-button ${activePage === 'dex' ? 'active' : ''}`}
+        onClick={() => onPageChange('dex')}
+      >
+        図鑑
       </button>
     </nav>
   )

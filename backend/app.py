@@ -9,6 +9,7 @@ from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from sqlalchemy import inspect, text
+from werkzeug.security import check_password_hash, generate_password_hash
 
 load_dotenv()
 
@@ -23,7 +24,7 @@ CORS(
         r"/api/*": {
             "origins": "*",
             "methods": ["GET", "POST", "PUT", "OPTIONS"],
-            "allow_headers": ["Content-Type"],
+            "allow_headers": ["Content-Type", "X-User-Id"],
         }
     },
 )
@@ -45,8 +46,35 @@ class APIError(Exception):
         self.status_code = status_code
         self.detail = detail
 
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    def set_password(self, password: str) -> None:
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        return check_password_hash(self.password_hash, password)
+
+    def to_public_dict(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+        }
+
+
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
     task_name = db.Column(db.String(255), nullable=False)
     task_date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     barcode = db.Column(db.String(32), nullable=True)
@@ -70,6 +98,7 @@ class Task(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
+            "user_id": self.user_id,
             "barcode": self.barcode,
             "purchase_date": self.purchase_date.isoformat() if self.purchase_date else None,
             "product_name": self.product_name or self.task_name,
@@ -92,6 +121,7 @@ class Task(db.Model):
 
 
 TASK_SCHEMA_UPDATES = {
+    "user_id": "ALTER TABLE task ADD COLUMN user_id INTEGER",
     "barcode": "ALTER TABLE task ADD COLUMN barcode VARCHAR(32)",
     "purchase_date": "ALTER TABLE task ADD COLUMN purchase_date DATE",
     "product_name": "ALTER TABLE task ADD COLUMN product_name VARCHAR(255)",
@@ -108,9 +138,9 @@ TASK_SCHEMA_UPDATES = {
 
 def ensure_task_schema() -> None:
     with app.app_context():
+        db.create_all()
         inspector = inspect(db.engine)
         if "task" not in inspector.get_table_names():
-            db.create_all()
             return
 
         existing_columns = {column["name"] for column in inspector.get_columns("task")}
@@ -181,6 +211,43 @@ def parse_required_date(value: str | None, field_name: str) -> date:
         return date.fromisoformat(value)
     except ValueError as exc:
         raise APIError(400, f"{field_name} must be in YYYY-MM-DD format") from exc
+
+
+def parse_auth_payload() -> tuple[str, str]:
+    payload = request.get_json(silent=True) or {}
+    username = str(payload.get("username", "")).strip()
+    password = str(payload.get("password", "")).strip()
+
+    if not username:
+        raise APIError(400, "username is required")
+    if " " in username:
+        raise APIError(400, "username cannot contain spaces")
+    if len(username) < 3:
+        raise APIError(400, "username must be at least 3 characters")
+    if len(username) > 64:
+        raise APIError(400, "username must be 64 characters or less")
+    if not password:
+        raise APIError(400, "password is required")
+    if len(password) < 8:
+        raise APIError(400, "password must be at least 8 characters")
+
+    return username, password
+
+
+def get_request_user() -> User | None:
+    user_id_header = request.headers.get("X-User-Id")
+    if not user_id_header:
+        return None
+
+    try:
+        user_id = int(user_id_header)
+    except ValueError as exc:
+        raise APIError(400, "X-User-Id must be an integer") from exc
+
+    user = db.session.get(User, user_id)
+    if not user:
+        raise APIError(401, "Invalid user")
+    return user
 
 
 def guess_category(product_name: str, product_description: str | None) -> str:
@@ -328,10 +395,44 @@ def root():
 def health():
     return jsonify({"status": "ok"})
 
+
+@app.post("/api/auth/register")
+def register():
+    username, password = parse_auth_payload()
+
+    existing = User.query.filter_by(username=username).first()
+    if existing:
+        raise APIError(409, "username is already in use")
+
+    user = User(username=username)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify(user.to_public_dict()), 201
+
+
+@app.post("/api/auth/login")
+def login():
+    username, password = parse_auth_payload()
+
+    user = User.query.filter_by(username=username).first()
+    if not user or not user.check_password(password):
+        raise APIError(401, "invalid username or password")
+
+    return jsonify(user.to_public_dict())
+
 ##リクエストに対してデータベースを'全件'返す（要修正)
 @app.get("/api/tasks") 
 def get_tasks():
-    tasks = Task.query.order_by(Task.suggested_expiration.is_(None), Task.suggested_expiration.asc(), Task.id.desc()).all()
+    user = get_request_user()
+    query = Task.query
+    if user:
+        query = query.filter(Task.user_id == user.id)
+    else:
+        query = query.filter(Task.user_id.is_(None))
+
+    tasks = query.order_by(Task.suggested_expiration.is_(None), Task.suggested_expiration.asc(), Task.id.desc()).all()
     result = [task.to_dict() for task in tasks]
 
     return jsonify(result)
@@ -339,7 +440,14 @@ def get_tasks():
 ##特定のタスクのリクエストに対して、そのリクエストのis_doneを完了(True)にして返す
 @app.put("/api/tasks/<int:task_id>/done")
 def change_task_done(task_id):
-    task = db.session.get(Task, task_id)
+    user = get_request_user()
+    query = Task.query.filter(Task.id == task_id)
+    if user:
+        query = query.filter(Task.user_id == user.id)
+    else:
+        query = query.filter(Task.user_id.is_(None))
+
+    task = query.first()
     if not task:
         return jsonify({"detail": "The expected task is not found"}), 404
     
@@ -353,6 +461,7 @@ def change_task_done(task_id):
 ##フロントエンドからタスクをデータベースに登録する
 @app.post("/api/tasks")
 def create_task():
+    user = get_request_user()
     data = request.get_json(silent=True) or {}
     required_fields = [
         "barcode",
@@ -369,6 +478,7 @@ def create_task():
 
     product_name = str(data["product_name"]).strip()
     new_task = Task(
+        user_id=user.id if user else None,
         task_name=product_name,
         barcode=str(data["barcode"]).strip(),
         purchase_date=parse_required_date(data.get("purchase_date"), "purchase_date"),
