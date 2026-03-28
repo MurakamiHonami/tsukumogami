@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app import app, db, estimate_expiration_date, guess_category
+from app import app, db, estimate_expiration_date, guess_category, get_category_id
 
 
 @pytest.fixture
@@ -24,6 +24,18 @@ def client():
         db.session.remove()
         db.drop_all()
 
+@pytest.mark.parametrize("category_name, expected_id", [
+    ("火災警報器", 1),
+    ("冷蔵庫", 2),
+    ("食品", 19),
+
+    ("存在しないアイテム", 99),
+    ("", 99),
+    (None, 99),
+])
+
+def test_get_category_if(category_name, expected_id):
+    assert get_category_id(category_name) == expected_id
 
 def build_task_payload():
     return {
@@ -45,7 +57,7 @@ def test_guess_category():
 
 def test_estimate_expiration_date():
     base_date = date(2026, 3, 22)
-    assert estimate_expiration_date("food", base_date) == date(2026, 9, 18)
+    assert estimate_expiration_date("食品", base_date) == date(2026, 9, 18)
 
 
 def test_get_tasks_empty(client):
@@ -166,6 +178,25 @@ def test_estimate_missing_barcode(client):
     assert response.status_code == 400
     assert "barcode" in response.get_json()["detail"].lower()
 
+def test_estimate_returns_category_id(client, mocker):
+    mocker.patch('app.get_yahoo_item', return_value={
+        "name": "パナソニック 冷蔵庫",
+        "description": "大容量の冷蔵庫です",
+        "parentGenreCategories": [{"name": "家電"}]
+    })
+
+    response = client.post("/api/estimate", json={
+        "barcode": "4901234567890",
+        "purchase_date": "2026-03-28"
+    })
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert "category_id" in data
+    assert data["category_id"] == 2
+    assert data["category"] == "冷蔵庫"
 
 @patch("app.requests.get")
 @patch("app.requests.post")
