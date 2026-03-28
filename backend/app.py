@@ -468,7 +468,9 @@ def infer_deadline_reason(
         f"{expiration_date.isoformat()} を推定交換期限としました。"
     )
 
-
+def get_category_id(category_name: str) -> int:
+    return CATEGORY_TO_ID.get(category_name, 99)
+ 
 @app.get("/")
 def root():
     return jsonify({"message": "Flask backend is running"})
@@ -612,6 +614,7 @@ def estimate():
     )
     description = item.get("description", "")
     category = guess_category(product_name, f"{description} {genre_text}")
+    category_id = get_category_id(category)
     suggested_expiration = estimate_expiration_date(category, purchase_date)
     reason = infer_deadline_reason(product_name, category, purchase_date, suggested_expiration)
 
@@ -620,6 +623,7 @@ def estimate():
             "product_name": product_name,
             "product_image": product_image,
             "category": category,
+            "category_id": category_id,
             "suggested_expiration": suggested_expiration.isoformat(),
             "reason": reason,
         }
