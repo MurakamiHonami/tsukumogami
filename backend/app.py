@@ -135,6 +135,56 @@ TASK_SCHEMA_UPDATES = {
     "updated_at": "ALTER TABLE task ADD COLUMN updated_at TIMESTAMP",
 }
 
+EXPIRATION_RULES = {
+    "火災警報器": 365 * 10,
+
+    "冷蔵庫": 365 * 8,
+    "家電": 365 * 5,
+    "防災用品": 365 * 5,
+
+    "カー用品": 365 * 3,
+    "PC周辺機器": 365 * 3,
+    "電池": 365 * 3,
+
+    "季節用品": 365,
+    "家電消耗品": 365,
+
+    "浄水器カートリッジ": 90,
+    "オーラルケア": 90,
+    "掃除用品": 90,
+    "日用品・消耗品": 90,
+    "日用品": 90,
+
+    "衛生用品": 30,
+    "コンタクトレンズ": 30,
+    "冷凍食品": 30,
+
+    "冷蔵食品": 7,
+    "食品": 180
+}
+
+CATEGORY_TO_ID = {
+    "火災警報器": 1,
+    "冷蔵庫": 2,
+    "家電": 3,
+    "防災用品": 4,
+    "カー用品": 5,
+    "PC周辺機器": 6,
+    "電池": 7,
+    "季節用品": 8,
+    "家電消耗品": 9,
+    "浄水器カートリッジ": 10,
+    "オーラルケア": 11,
+    "掃除用品": 12,
+    "日用品・消耗品": 13,
+    "日用品": 14,
+    "衛生用品": 15,
+    "コンタクトレンズ": 16,
+    "冷凍食品": 17,
+    "冷凍食品": 18,
+    "食品": 19, 
+    "その他": 99
+}
 
 def ensure_task_schema() -> None:
     with app.app_context():
@@ -253,17 +303,56 @@ def get_request_user() -> User | None:
 def guess_category(product_name: str, product_description: str | None) -> str:
     text = f"{product_name or ''} {product_description or ''}".lower()
     mapping = [
+        ("交換目安", "日用品・消耗品"),
+        ("長期保存", "防災用品"),
+
+        ("交換用カートリッジ", "浄水器カートリッジ"),
+        ("浄水フィルター", "浄水器カートリッジ"),
+        ("替えブラシ", "オーラルケア"),
+        ("替刃", "衛生用品"),
+        ("ワンデー", "コンタクトレンズ"),
+        ("1day", "コンタクトレンズ"),
+        ("2ウィーク", "コンタクトレンズ"),
+        ("2week", "コンタクトレンズ"),
+        ("集じんフィルター", "家電消耗品"),
+        ("加湿フィルター", "家電消耗品"),
+        ("クリーナーパック", "家電消耗品"),
+
+        ("スタッドレス", "カー用品"),
+        ("スノーワイパー", "カー用品"),
+        ("エンジンオイル", "カー用品"),
+        ("除雪", "季節用品"),
+        ("雪かき", "季節用品"),
+        ("消火器", "防災用品"),
+        ("保存水", "防災用品"),
+        ("非常用持ち出し", "防災用品"),
+
+        ("要冷凍", "冷凍食品"),
+        ("要冷蔵", "冷凍食品"),
+
         ("fire alarm", "火災警報器"),
         ("smoke detector", "火災警報器"),
         ("refrigerator", "冷蔵庫"),
         ("冷蔵庫", "冷蔵庫"),
         ("battery", "電池"),
         ("電池", "電池"),
+
+        ("詰め替え", "日用品"),
+        ("詰替", "日用品"),
+        ("医薬部外品", "衛生用品"),
+        ("無香料", "日用品"),
+        ("除菌", "掃除用品"),
         ("mask", "衛生用品"),
         ("マスク", "衛生用品"),
         ("cleaner", "掃除用品"),
+
+        ("ワイヤレス", "PC周辺機器"),
+        ("bluetooth", "PC周辺機器"),
         ("カメラ", "家電"),
         ("テレビ", "家電"),
+
+        ("アレルギー物質", "食品"),
+        ("賞味期限", "食品"),
         ("food", "食品"),
         ("食品", "食品"),
     ]
@@ -274,16 +363,10 @@ def guess_category(product_name: str, product_description: str | None) -> str:
 
 
 def estimate_expiration_date(category: str, purchase_date: date) -> date:
-    if "火災警報器" in category:
-        return purchase_date + timedelta(days=5 * 365)
-    if "冷蔵庫" in category:
-        return purchase_date + timedelta(days=8 * 365)
-    if "電池" in category:
-        return purchase_date + timedelta(days=3 * 365)
-    if "食品" in category:
-        return purchase_date + timedelta(days=180)
-    if "衛生用品" in category:
-        return purchase_date + timedelta(days=365)
+    for keyword, added_days in EXPIRATION_RULES.items():
+        if keyword in category:
+            return purchase_date + timedelta(days=added_days)
+        
     return purchase_date + timedelta(days=2 * 365)
 
 
@@ -385,7 +468,9 @@ def infer_deadline_reason(
         f"{expiration_date.isoformat()} を推定交換期限としました。"
     )
 
-
+def get_category_id(category_name: str) -> int:
+    return CATEGORY_TO_ID.get(category_name, 99)
+ 
 @app.get("/")
 def root():
     return jsonify({"message": "Flask backend is running"})
@@ -529,6 +614,7 @@ def estimate():
     )
     description = item.get("description", "")
     category = guess_category(product_name, f"{description} {genre_text}")
+    category_id = get_category_id(category)
     suggested_expiration = estimate_expiration_date(category, purchase_date)
     reason = infer_deadline_reason(product_name, category, purchase_date, suggested_expiration)
 
@@ -537,6 +623,7 @@ def estimate():
             "product_name": product_name,
             "product_image": product_image,
             "category": category,
+            "category_id": category_id,
             "suggested_expiration": suggested_expiration.isoformat(),
             "reason": reason,
         }
