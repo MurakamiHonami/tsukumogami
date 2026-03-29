@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import './App.css'
 import AppNavigation from './components/AppNavigation'
 import SceneHeader from './components/SceneHeader'
-import { getRandomYokai, yokaiList } from './constants/yokai'
+import { getRandomYokai, getRandomYokaiByCategory, yokaiList } from './constants/yokai'
 import CalendarPage from './pages/CalendarPage'
 import RegisterPage from './pages/RegisterPage'
 import {
@@ -27,6 +27,16 @@ function App() {
   const [calendarMonth, setCalendarMonth] = useState(getInitialCalendarMonth)
   const [savedEntries, setSavedEntries] = useState(loadSavedEntries)
 
+  // ⭐ カテゴリ判定（簡易版）
+  const getCategory = (name) => {
+    if (!name) return "C"
+
+    if (name.includes("ジュース") || name.includes("コーラ")) return "A"
+    if (name.includes("パン") || name.includes("おにぎり")) return "B"
+
+    return "C"
+  }
+
   useEffect(() => {
     const interval = setInterval(() => {
       setHeaderYokai((prev) => yokaiList[(yokaiList.indexOf(prev) + 1) % yokaiList.length])
@@ -40,8 +50,6 @@ function App() {
   }, [savedEntries])
 
   const handleSubmit = async () => {
-    const newYokai = getRandomYokai()
-    setResultYokai(newYokai)
     setError('')
     setStatus('付喪神を召喚中… ')
     setResult(null)
@@ -49,11 +57,25 @@ function App() {
     try {
       const estimate = await requestExpirationEstimate({ barcode, purchaseDate })
 
+      //  商品名
+      const itemName = estimate.product_name || ""
+
+      //  カテゴリ決定
+      const category = estimate.category || getCategory(itemName)
+
+      //  カテゴリ別で妖怪選択
+      const newYokai = getRandomYokaiByCategory(category)
+      setResultYokai(newYokai)
+
       setResult(estimate)
-      setSavedEntries((prev) => [createSavedEntry({ barcode, purchaseDate, estimate }), ...prev])
+      setSavedEntries((prev) => [
+        createSavedEntry({ barcode, purchaseDate, estimate }),
+        ...prev
+      ])
 
       const expirationDate = parseISODate(estimate.suggested_expiration)
       setCalendarMonth(new Date(expirationDate.getFullYear(), expirationDate.getMonth(), 1))
+
       setStatus('交換期限推定完了。付喪神が現れました！')
     } catch (submissionError) {
       setError(submissionError.message || '取得失敗')

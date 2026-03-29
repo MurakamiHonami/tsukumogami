@@ -110,8 +110,8 @@ function RegisterForm({
         物品を登録
       </button>
 
-      {status && <div className="status"> {status}</div>}
-      {error && <div className="error"> {error}</div>}
+      {status && <div className="status">🔥 {status}</div>}
+      {error && <div className="error">⚠️ {error}</div>}
     </div>
   );
 }
