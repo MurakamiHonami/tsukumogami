@@ -9,23 +9,17 @@ export const yokaiImageMap = {
   狸: 'tanuki.png',
   河童: 'kappa.png',
   だるま: 'daruma_red.png',
-  九尾: 'kyuubi.png',
-  猫又: 'nekomata.png',
-  おばけ: 'obake.png',
-  一反木綿: 'ittanmomen.png',
-  一つ目小僧: 'hitotsume_kozou.png',
-  傘妖怪: 'kasa_youkai.png',
 };
 
 // カテゴリ名ごとのグループ
 export const yokaiGroup = {
-  火災警報器: ['河童', '一つ目小僧', '一反木綿'],
-  冷蔵庫: ['九尾', '猫又'],
-  電池: ['おばけ', '傘妖怪'],
+  火災警報器: ['河童'],
+  冷蔵庫: ['招き猫'],
+  電池: ['提灯お化け'],
   衛生用品: ['座敷童子'],
   掃除用品: ['狸'],
   家電: ['だるま'],
-  食品: ['化け猫', '鬼', '提灯お化け'],
+  食品: ['鬼', '提灯お化け'],
   その他: ['唐傘おばけ', '傘地蔵', '招き猫'],
 };
 

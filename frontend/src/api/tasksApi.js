@@ -42,6 +42,8 @@ export async function fetchTasks(userId) {
 }
 
 export async function createTask({ barcode, purchaseDate, estimate, yokai, userId }) {
+  const yokaiName = typeof yokai === 'string' ? yokai : yokai?.name ?? ''
+
   const response = await fetch(`${API_BASE}/api/tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...buildUserHeaders(userId) },
@@ -53,7 +55,7 @@ export async function createTask({ barcode, purchaseDate, estimate, yokai, userI
       suggested_expiration: estimate.suggested_expiration,
       reason: estimate.reason,
       product_image: estimate.product_image,
-      yokai,
+      yokai: yokaiName,
     }),
   })
 

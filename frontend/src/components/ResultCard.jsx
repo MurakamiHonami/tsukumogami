@@ -8,6 +8,10 @@ function ResultCard({ result, resultYokai }) {
     return null
   }
 
+  const yokaiName =
+    typeof resultYokai === 'string' ? resultYokai : resultYokai?.name ?? '化け猫'
+  const yokaiImage = yokaiAppearanceEffectSrc && yokaiImageMap[yokaiName] ? `/${yokaiImageMap[yokaiName]}` : null
+
   return (
     <div className="result">
       <div className="smoke">交換期限が記録されました</div>
@@ -22,8 +26,8 @@ function ResultCard({ result, resultYokai }) {
           aria-hidden="true"
         />
         <div className="yokai-appear-content">
-          <img src={`/${yokaiImageMap[resultYokai]}`} alt={resultYokai} className="yokai-display" />
-          <p className="yokai-text">{resultYokai}が出現した！</p>
+          {yokaiImage ? <img src={yokaiImage} alt={yokaiName} className="yokai-display" /> : null}
+          <p className="yokai-text">{yokaiName}が出現した！</p>
         </div>
       </div>
       <h2>物品情報</h2>
