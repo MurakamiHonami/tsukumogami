@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react'
 
 function RegisterForm({
   barcode,
@@ -9,120 +9,212 @@ function RegisterForm({
   onPurchaseDateChange,
   onSubmit,
 }) {
-  console.log("RegisterForm読み込まれた");
+  const scannerRef = useRef(null)
+  const lastDetectedCodeRef = useRef('')
+  const lastDetectedAtRef = useRef(0)
+  const detectedHandlerRef = useRef(null)
+  const processedHandlerRef = useRef(null)
 
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
+  const [cameraError, setCameraError] = useState('')
+  const [isCameraActive, setIsCameraActive] = useState(false)
+  const [isStartingCamera, setIsStartingCamera] = useState(false)
+  const [scannerMessage, setScannerMessage] = useState('')
 
-  // カメラ起動
-  const startCamera = async () => {
-    console.log("カメラ起動");
+  const stopScanner = (shouldResetState = true) => {
+    const quagga = window.Quagga
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      console.log("取得成功");
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+    if (quagga) {
+      if (detectedHandlerRef.current) {
+        quagga.offDetected(detectedHandlerRef.current)
+        detectedHandlerRef.current = null
       }
-    } catch (err) {
-      console.error("カメラエラー", err);
-    }
-  };
 
-  // 撮影して送信
-  const captureAndSend = async () => {
-    console.log("撮影ボタン押された");
-
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-
-    if (!video || !video.videoWidth) {
-      console.log("まだカメラ準備できてない");
-      return;
-    }
-
-    const ctx = canvas.getContext('2d');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    ctx.drawImage(video, 0, 0);
-
-    const imageSrc = canvas.toDataURL('image/png');
-    console.log("画像取得OK");
-
-    try {
-      const response = await fetch('/api/scan-barcode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: imageSrc }),
-      });
-
-      console.log("API送信OK", response);
-
-      const data = await response.json();
-      console.log("結果", data);
-
-      if (data.code) {
-        onBarcodeChange(data.code);
-      } else {
-        console.log("コードが取得できなかった");
+      if (processedHandlerRef.current) {
+        quagga.offProcessed(processedHandlerRef.current)
+        processedHandlerRef.current = null
       }
-    } catch (err) {
-      console.error("送信エラー", err);
+
+      try {
+        quagga.stop()
+      } catch (scannerStopError) {
+        console.error('Failed to stop scanner:', scannerStopError)
+      }
     }
-  };
+
+    if (scannerRef.current) {
+      scannerRef.current.innerHTML = ''
+    }
+
+    if (shouldResetState) {
+      setIsCameraActive(false)
+      setIsStartingCamera(false)
+    }
+  }
+
+  useEffect(() => () => stopScanner(false), [])
+
+  const startScanner = async () => {
+    if (isCameraActive || isStartingCamera) {
+      return
+    }
+
+    if (!window.Quagga) {
+      setCameraError('バーコードスキャナーの読み込みに失敗しました。')
+      return
+    }
+
+    if (!scannerRef.current) {
+      setCameraError('カメラの表示領域を初期化できませんでした。')
+      return
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('このブラウザではカメラを利用できません。')
+      return
+    }
+
+    setIsStartingCamera(true)
+    setCameraError('')
+    setScannerMessage('カメラを起動しています...')
+    lastDetectedCodeRef.current = ''
+    lastDetectedAtRef.current = 0
+
+    const quagga = window.Quagga
+
+    quagga.init(
+      {
+        inputStream: {
+          type: 'LiveStream',
+          target: scannerRef.current,
+          constraints: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        },
+        locator: {
+          patchSize: 'medium',
+          halfSample: true,
+        },
+        numOfWorkers: navigator.hardwareConcurrency
+          ? Math.min(4, navigator.hardwareConcurrency)
+          : 2,
+        frequency: 10,
+        locate: true,
+        decoder: {
+          readers: ['ean_reader', 'ean_8_reader', 'upc_reader', 'upc_e_reader'],
+        },
+      },
+      (initError) => {
+        if (initError) {
+          console.error('Failed to initialize Quagga:', initError)
+          setCameraError('カメラを起動できませんでした。権限設定を確認してください。')
+          setScannerMessage('')
+          setIsStartingCamera(false)
+          return
+        }
+
+        processedHandlerRef.current = (result) => {
+          const drawingCtx = quagga.canvas?.ctx?.overlay
+          const drawingCanvas = quagga.canvas?.dom?.overlay
+
+          if (!drawingCtx || !drawingCanvas) {
+            return
+          }
+
+          drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height)
+
+          if (result?.box) {
+            quagga.ImageDebug.drawPath(result.box, { x: 0, y: 1 }, drawingCtx, {
+              color: '#cc3528',
+              lineWidth: 3,
+            })
+          }
+        }
+
+        detectedHandlerRef.current = (result) => {
+          const code = result?.codeResult?.code?.trim()
+
+          if (!code) {
+            return
+          }
+
+          const now = Date.now()
+          if (
+            code === lastDetectedCodeRef.current &&
+            now - lastDetectedAtRef.current < 1500
+          ) {
+            return
+          }
+
+          lastDetectedCodeRef.current = code
+          lastDetectedAtRef.current = now
+          onBarcodeChange(code)
+          alert(`読み取り成功！: ${code}`)
+          setScannerMessage(`バーコードを読み取りました: ${code}`)
+          stopScanner()
+        }
+
+        quagga.onProcessed(processedHandlerRef.current)
+        quagga.onDetected(detectedHandlerRef.current)
+        quagga.start()
+        setIsCameraActive(true)
+        setIsStartingCamera(false)
+        setScannerMessage('バーコードをカメラにかざしてください。')
+      },
+    )
+  }
+
+  const handleCameraToggle = async () => {
+    if (isCameraActive) {
+      stopScanner()
+      setScannerMessage('')
+      return
+    }
+
+    await startScanner()
+  }
 
   return (
     <div className="form">
-      <label>バーコード(JAN)</label>
-      <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3', backgroundColor: '#000' }}>
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-      </div>
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-      <button
-        onClick={captureAndSend}
-        disabled={isScanning}
-        style={{
-          marginTop: '20px',
-          padding: '12px 24px',
-          fontSize: '16px',
-          cursor: isScanning ? 'not-allowed' : 'pointer',
-        }}
-      >
-        {isScanning ? '読み取り中...' : 'バーコードを撮影'}
-      </button>
-
+      <label htmlFor="barcode">バーコード（JANコード）</label>
+      {!scannerMessage ?( <small style={{ color: "#cc3528", fontSize: "0.8rem", fontWeight: "700" }}>カメラで読み取れない場合は手入力してください</small>
+        ) : (
+          <small style={{ color: "#5c3066", fontSize: "0.8rem", fontWeight: "700" }}>{scannerMessage}</small>
+        )
+      }
       <input
-        value={barcode || result?.barcode || ''}
+        id="barcode"
+        value={barcode}
         onChange={(event) => onBarcodeChange(event.target.value)}
         placeholder="例: 4901234567896"
       />
 
-      {/* カメラ起動 */}
-      <button type="button" onClick={startCamera}>
-        カメラ起動
-      </button>
+      <div className={`camera-accordion ${isCameraActive || isStartingCamera ? 'is-open' : ''}`}>
+        <button
+          type="button"
+          className="camera-trigger"
+          onClick={handleCameraToggle}
+          disabled={isStartingCamera}
+        >
+          <span className="camera-trigger-label">
+            {isStartingCamera ? 'カメラを起動中...' : isCameraActive ? 'カメラを停止' : 'カメラで読み取る'}
+          </span>
+        </button>
 
-      {/* 撮影 */}
-      <button type="button" onClick={captureAndSend}>
-        撮影して送信
-      </button>
+        <div className="camera-scroll" aria-hidden={!isCameraActive && !isStartingCamera}>
+          <div className="camera-scroll-inner">
+            <div className="camera-preview-frame">
+              <div ref={scannerRef} className="camera-preview" />
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {/* カメラ映像 */}
-      <video ref={videoRef} style={{ width: '100%' }} />
 
-      {/* 非表示canvas */}
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-
-      <label>購入日</label>
+      <label htmlFor="purchaseDate">購入日</label>
       <input
+        id="purchaseDate"
         type="date"
         value={purchaseDate}
         onChange={(event) => onPurchaseDateChange(event.target.value)}
@@ -132,10 +224,10 @@ function RegisterForm({
         物品を登録
       </button>
 
-      {status && <div className="status">🔥 {status}</div>}
-      {error && <div className="error">⚠️ {error}</div>}
+      {status && <div className="status">{status}</div>}
+      {(error || cameraError) && <div className="error">登録に失敗しました</div>}
     </div>
-  );
+  )
 }
 
 export default RegisterForm;
