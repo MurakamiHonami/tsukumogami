@@ -1,0 +1,504 @@
+.lp-page {
+  --lp-bg-deep: #140f15;
+  --lp-bg-warm: #2d1a15;
+  --lp-ink: #201714;
+  --lp-paper: rgba(247, 239, 221, 0.94);
+  --lp-accent: #c4472d;
+  --lp-accent-soft: #d89a47;
+  --lp-line: rgba(114, 74, 39, 0.22);
+
+  min-height: 100vh;
+  color: #fff8ed;
+  padding: 32px 20px 80px;
+  background:
+    radial-gradient(circle at 14% 16%, rgba(194, 71, 45, 0.22), transparent 28%),
+    radial-gradient(circle at 82% 12%, rgba(216, 154, 71, 0.16), transparent 24%),
+    radial-gradient(circle at 74% 78%, rgba(42, 75, 124, 0.18), transparent 28%),
+    linear-gradient(140deg, var(--lp-bg-deep) 0%, #1e1415 38%, var(--lp-bg-warm) 100%);
+}
+
+.lp-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  background: url('/wagara.png') center / 540px repeat;
+}
+
+.lp-hero,
+.lp-section {
+  width: min(1160px, 100%);
+  margin: 0 auto;
+}
+
+.lp-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 36px;
+  align-items: center;
+  padding: 34px 0 48px;
+}
+
+.lp-kicker {
+  margin: 0 0 10px;
+  color: #f0c770;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.lp-hero h1,
+.lp-section h2,
+.lp-flow-step h3,
+.lp-feature-card h3 {
+  font-family:
+    'Shiranui',
+    'Shippori Mincho',
+    'Yu Mincho',
+    serif;
+}
+
+.lp-hero h1 {
+  margin: 0;
+  font-size: clamp(2.8rem, 6vw, 5.2rem);
+  line-height: 1;
+  color: #fff1da;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.lp-lead {
+  max-width: 39rem;
+  margin: 20px 0 0;
+  font-size: 1.05rem;
+  line-height: 1.95;
+  color: rgba(255, 244, 226, 0.9);
+}
+
+.lp-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.lp-primary-action,
+.lp-secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 0 24px;
+  text-decoration: none;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.lp-primary-action {
+  color: #fff6e9;
+  background: linear-gradient(135deg, #d05636, #8f2218);
+  box-shadow: 0 14px 28px rgba(114, 26, 16, 0.28);
+}
+
+.lp-secondary-action {
+  color: #fff1da;
+  border: 1px solid rgba(255, 238, 212, 0.26);
+  background: rgba(255, 249, 238, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+.lp-primary-action:hover,
+.lp-secondary-action:hover {
+  transform: translateY(-2px);
+}
+
+.lp-proof-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0;
+  margin: 26px 0 0;
+  list-style: none;
+}
+
+.lp-proof-list li {
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 235, 204, 0.18);
+  background: rgba(255, 248, 238, 0.08);
+  color: rgba(255, 245, 230, 0.9);
+}
+
+.lp-stage {
+  position: relative;
+}
+
+.lp-stage-paper {
+  position: relative;
+  min-height: 560px;
+  border: 1px solid rgba(255, 231, 195, 0.22);
+  background:
+    linear-gradient(180deg, rgba(255, 248, 236, 0.95), rgba(237, 221, 190, 0.92)),
+    url('/japanese-paper.jpg') center / cover;
+  box-shadow:
+    0 24px 42px rgba(12, 8, 8, 0.22),
+    inset 0 0 0 1px rgba(130, 96, 44, 0.12);
+  overflow: hidden;
+}
+
+.lp-stage-paper::before {
+  content: '';
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(138, 96, 43, 0.16);
+}
+
+.lp-stage-paper::after {
+  content: '';
+  position: absolute;
+  inset: auto -20% -28% -20%;
+  height: 52%;
+  background:
+    radial-gradient(circle at center top, rgba(233, 176, 83, 0.4), transparent 36%),
+    linear-gradient(180deg, rgba(90, 42, 20, 0.04), rgba(90, 42, 20, 0.14));
+}
+
+.lp-stage-float,
+.lp-stage-character,
+.lp-value-image {
+  position: absolute;
+  object-fit: contain;
+}
+
+.lp-stage-float-lantern {
+  top: 36px;
+  left: 34px;
+  width: 86px;
+  animation: lpFloat 4.2s ease-in-out infinite;
+}
+
+.lp-stage-character-main {
+  right: 7%;
+  bottom: 10%;
+  width: min(64%, 300px);
+  filter: drop-shadow(0 16px 24px rgba(52, 31, 16, 0.25));
+}
+
+.lp-stage-character-sub {
+  left: 10%;
+  bottom: 13%;
+  width: min(34%, 150px);
+  filter: drop-shadow(0 12px 20px rgba(52, 31, 16, 0.18));
+}
+
+.lp-stage-card {
+  position: absolute;
+  display: grid;
+  gap: 4px;
+  max-width: 220px;
+  padding: 18px 20px;
+  color: var(--lp-ink);
+  background: rgba(255, 252, 245, 0.9);
+  border: 1px solid rgba(130, 96, 44, 0.2);
+  box-shadow: 12px 12px 24px rgba(58, 35, 19, 0.12);
+}
+
+.lp-stage-card span {
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8b5f2f;
+}
+
+.lp-stage-card strong {
+  font-size: 1.15rem;
+  line-height: 1.45;
+}
+
+.lp-stage-card-top {
+  top: 18%;
+  right: 10%;
+}
+
+.lp-stage-card-bottom {
+  left: 8%;
+  bottom: 12%;
+}
+
+.lp-section {
+  margin-top: 34px;
+  padding: 38px;
+  border: 1px solid rgba(255, 231, 195, 0.12);
+  background: rgba(18, 12, 12, 0.34);
+  backdrop-filter: blur(10px);
+}
+
+.lp-section-heading {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.lp-section h2 {
+  margin: 0;
+  font-size: clamp(1.8rem, 3.8vw, 3rem);
+  line-height: 1.2;
+  color: #fff0d6;
+}
+
+.lp-problem-grid,
+.lp-feature-grid,
+.lp-flow-steps {
+  display: grid;
+  gap: 18px;
+}
+
+.lp-problem-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lp-problem-card,
+.lp-feature-card,
+.lp-flow-step,
+.lp-value-point {
+  background:
+    linear-gradient(180deg, rgba(255, 249, 239, 0.96), rgba(240, 226, 198, 0.92)),
+    url('/japanese-paper.jpg') center / 500px;
+  color: var(--lp-ink);
+  border: 1px solid var(--lp-line);
+}
+
+.lp-problem-card {
+  min-height: 180px;
+  padding: 24px;
+  display: grid;
+  align-items: end;
+  font-size: 1.03rem;
+  line-height: 1.9;
+}
+
+.lp-value-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 380px);
+  gap: 28px;
+  align-items: center;
+}
+
+.lp-value-copy p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.95;
+  color: rgba(255, 244, 226, 0.9);
+}
+
+.lp-value-points {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.lp-value-point {
+  padding: 16px 18px;
+  font-weight: 700;
+}
+
+.lp-value-visual {
+  position: relative;
+  min-height: 360px;
+}
+
+.lp-value-orbit {
+  position: absolute;
+  inset: 50%;
+  border: 1px solid rgba(255, 223, 176, 0.18);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.lp-value-orbit-one {
+  width: min(100%, 320px);
+  height: min(100%, 320px);
+}
+
+.lp-value-orbit-two {
+  width: min(76%, 240px);
+  height: min(76%, 240px);
+}
+
+.lp-value-image-main {
+  top: 14%;
+  left: 20%;
+  width: min(62%, 220px);
+  animation: lpFloat 4.6s ease-in-out infinite;
+}
+
+.lp-value-image-accent {
+  right: 10%;
+  bottom: 14%;
+  width: min(38%, 130px);
+  animation: lpFloat 5.4s ease-in-out infinite reverse;
+}
+
+.lp-feature-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lp-feature-card {
+  padding: 24px;
+}
+
+.lp-feature-index {
+  margin: 0 0 10px;
+  color: #8b5f2f;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lp-feature-card h3,
+.lp-flow-step h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #431f16;
+}
+
+.lp-feature-card p:last-child,
+.lp-flow-step p {
+  margin: 10px 0 0;
+  line-height: 1.9;
+}
+
+.lp-flow-steps {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lp-flow-step {
+  padding: 22px;
+}
+
+.lp-flow-step span {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--lp-accent);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.lp-cta {
+  text-align: center;
+  background:
+    linear-gradient(180deg, rgba(250, 241, 224, 0.96), rgba(232, 214, 180, 0.92)),
+    url('/japanese-paper.jpg') center / cover;
+  color: var(--lp-ink);
+}
+
+.lp-cta .lp-kicker,
+.lp-cta h2,
+.lp-cta p {
+  color: inherit;
+}
+
+.lp-cta p {
+  max-width: 42rem;
+  margin: 14px auto 0;
+  line-height: 1.9;
+}
+
+.lp-cta .lp-primary-action {
+  margin-top: 24px;
+}
+
+@keyframes lpFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@media (max-width: 960px) {
+  .lp-hero,
+  .lp-value-layout,
+  .lp-problem-grid,
+  .lp-feature-grid,
+  .lp-flow-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-hero {
+    padding-top: 10px;
+  }
+
+  .lp-stage-paper {
+    min-height: 500px;
+  }
+
+  .lp-stage-character-main {
+    right: 10%;
+    width: min(58%, 250px);
+  }
+
+  .lp-stage-card-top {
+    top: 12%;
+    right: 7%;
+  }
+
+  .lp-stage-card-bottom {
+    left: 7%;
+    bottom: 10%;
+  }
+}
+
+@media (max-width: 640px) {
+  .lp-page {
+    padding: 22px 14px 54px;
+  }
+
+  .lp-section {
+    padding: 24px 18px;
+  }
+
+  .lp-hero-actions,
+  .lp-proof-list {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .lp-primary-action,
+  .lp-secondary-action {
+    width: 100%;
+  }
+
+  .lp-stage-paper {
+    min-height: 420px;
+  }
+
+  .lp-stage-card {
+    max-width: 180px;
+    padding: 14px 16px;
+  }
+
+  .lp-stage-card strong {
+    font-size: 0.96rem;
+  }
+
+  .lp-stage-character-main {
+    width: min(62%, 210px);
+  }
+
+  .lp-stage-character-sub {
+    width: min(32%, 110px);
+  }
+
+  .lp-value-visual {
+    min-height: 280px;
+  }
+}

@@ -156,7 +156,7 @@ function App() {
       console.error('通知処理エラー', notificationError)
     }
 
-    const newYokai = getRandomYokai()
+    const newYokai = getRandomYokai().name
     setResultYokai(newYokai)
     setError('')
     setStatus('交換期限を計算中...')
