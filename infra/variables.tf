@@ -175,6 +175,12 @@ variable "s3_force_destroy" {
   default     = false
 }
 
+variable "ecr_force_delete" {
+  description = "Force delete ECR repositories on terraform destroy, including images."
+  type        = bool
+  default     = false
+}
+
 variable "yahoo_app_id" {
   description = "Yahoo Shopping API application ID for the backend."
   type        = string
