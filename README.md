@@ -184,6 +184,31 @@ To make this work as an approval gate:
 4. review the `Terraform Plan` job output in the `Terraform Deploy` workflow
 5. approve the `Terraform Apply` job
 
+### Manual destroy from GitHub Actions
+
+If you need to tear down the main infrastructure from GitHub Actions, run the `Terraform Destroy` workflow manually from the Actions tab.
+
+The workflow:
+
+1. requires typing `DESTROY`
+2. creates a reviewed `terraform plan -destroy`
+3. uploads the exact destroy plan as an artifact
+4. pauses at the `terraform-destroy` GitHub Environment
+5. runs `terraform apply tfdestroy` only after approval
+
+Before using it:
+
+1. create a GitHub Environment named `terraform-destroy`
+2. add required reviewers to that environment
+3. decide whether to enable the `force_destroy_s3` workflow input
+
+Important limitations:
+
+- The main destroy workflow does not remove the Terraform backend bootstrap stack in `infra/bootstrap`, so the remote state S3 bucket and DynamoDB lock table remain.
+- If `force_destroy_s3` is `false`, destroy can fail when Terraform-managed S3 buckets still contain objects.
+- The current ECR repository resource does not enable force-delete, so destroy can fail if the repository still contains images.
+- Resources not managed by the current Terraform state are never removed by `terraform destroy`.
+
 ### Recovering from a failed first apply
 
 If an earlier apply created AWS resources before Terraform remote state was configured, Terraform may fail with `AlreadyExists` errors for ECR, IAM, S3, or CloudWatch resources. In that case:

@@ -1,0 +1,353 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_destroy:
+        description: 'Type DESTROY to continue'
+        required: true
+        type: string
+      force_destroy_s3:
+        description: 'Empty and delete Terraform-managed S3 buckets before destroy'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-destroy
+  cancel-in-progress: false
+
+jobs:
+  plan_destroy:
+    name: Terraform Destroy Plan
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm_destroy == 'DESTROY'
+    outputs:
+      has_changes: ${{ steps.plan.outputs.has_changes }}
+      destroy_summary: ${{ steps.summarize.outputs.summary }}
+    env:
+      TF_IN_AUTOMATION: true
+      TF_WORKING_DIR: infra
+      TF_BACKEND_STATE_KEY: ${{ secrets.TF_BACKEND_STATE_KEY || 'infra/terraform.tfstate' }}
+      TF_VAR_s3_force_destroy: ${{ github.event.inputs.force_destroy_s3 == 'true' && 'true' || 'false' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.TF_VAR_AWS_REGION || 'ap-northeast-1' }}
+
+      - name: Export Terraform variables from secrets
+        env:
+          SECRET_AWS_REGION: ${{ secrets.TF_VAR_AWS_REGION }}
+          SECRET_PROJECT_NAME: ${{ secrets.TF_VAR_PROJECT_NAME }}
+          SECRET_ENVIRONMENT: ${{ secrets.TF_VAR_ENVIRONMENT }}
+          SECRET_VPC_CIDR: ${{ secrets.TF_VAR_VPC_CIDR }}
+          SECRET_PUBLIC_SUBNET_CIDRS: ${{ secrets.TF_VAR_PUBLIC_SUBNET_CIDRS }}
+          SECRET_PRIVATE_SUBNET_CIDRS: ${{ secrets.TF_VAR_PRIVATE_SUBNET_CIDRS }}
+          SECRET_DATABASE_URL: ${{ secrets.TF_VAR_DATABASE_URL }}
+          SECRET_DB_NAME: ${{ secrets.TF_VAR_DB_NAME }}
+          SECRET_DB_USERNAME: ${{ secrets.TF_VAR_DB_USERNAME }}
+          SECRET_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
+          SECRET_DB_INSTANCE_TYPE: ${{ secrets.TF_VAR_DB_INSTANCE_TYPE }}
+          SECRET_DB_VOLUME_SIZE: ${{ secrets.TF_VAR_DB_VOLUME_SIZE }}
+          SECRET_DB_KEY_NAME: ${{ secrets.TF_VAR_DB_KEY_NAME }}
+          SECRET_DB_SSH_ALLOWED_CIDR: ${{ secrets.TF_VAR_DB_SSH_ALLOWED_CIDR }}
+          SECRET_YAHOO_APP_ID: ${{ secrets.TF_VAR_YAHOO_APP_ID }}
+          SECRET_GEMINI_API_KEY: ${{ secrets.TF_VAR_GEMINI_API_KEY }}
+          SECRET_GITHUB_OWNER: ${{ secrets.TF_VAR_GITHUB_OWNER }}
+          SECRET_GITHUB_REPO: ${{ secrets.TF_VAR_GITHUB_REPO }}
+          SECRET_PIPELINE_BRANCH: ${{ secrets.TF_VAR_PIPELINE_BRANCH }}
+          SECRET_CODESTAR_CONNECTION_NAME: ${{ secrets.TF_VAR_CODESTAR_CONNECTION_NAME }}
+          SECRET_TAGS: ${{ secrets.TF_VAR_TAGS }}
+          SECRET_TF_VAR_APP_DOMAIN_NAME: ${{ secrets.TF_VAR_APP_DOMAIN_NAME }}
+          SECRET_TF_VAR_ROUTE53_ZONE_NAME: ${{ secrets.TF_VAR_ROUTE53_ZONE_NAME }}
+        shell: bash
+        run: |
+          export_if_set() {
+            key="$1"
+            value="$2"
+            if [ -n "$value" ]; then
+              printf '%s=%s\n' "$key" "$value" >> "$GITHUB_ENV"
+            fi
+          }
+
+          export_if_set TF_VAR_aws_region "$SECRET_AWS_REGION"
+          export_if_set TF_VAR_project_name "$SECRET_PROJECT_NAME"
+          export_if_set TF_VAR_environment "$SECRET_ENVIRONMENT"
+          export_if_set TF_VAR_vpc_cidr "$SECRET_VPC_CIDR"
+          export_if_set TF_VAR_public_subnet_cidrs "$SECRET_PUBLIC_SUBNET_CIDRS"
+          export_if_set TF_VAR_private_subnet_cidrs "$SECRET_PRIVATE_SUBNET_CIDRS"
+          export_if_set TF_VAR_database_url "$SECRET_DATABASE_URL"
+          export_if_set TF_VAR_db_name "$SECRET_DB_NAME"
+          export_if_set TF_VAR_db_username "$SECRET_DB_USERNAME"
+          export_if_set TF_VAR_db_password "$SECRET_DB_PASSWORD"
+          export_if_set TF_VAR_db_instance_type "$SECRET_DB_INSTANCE_TYPE"
+          export_if_set TF_VAR_db_volume_size "$SECRET_DB_VOLUME_SIZE"
+          export_if_set TF_VAR_db_key_name "$SECRET_DB_KEY_NAME"
+          export_if_set TF_VAR_db_ssh_allowed_cidr "$SECRET_DB_SSH_ALLOWED_CIDR"
+          export_if_set TF_VAR_yahoo_app_id "$SECRET_YAHOO_APP_ID"
+          export_if_set TF_VAR_gemini_api_key "$SECRET_GEMINI_API_KEY"
+          export_if_set TF_VAR_github_owner "$SECRET_GITHUB_OWNER"
+          export_if_set TF_VAR_github_repo "$SECRET_GITHUB_REPO"
+          export_if_set TF_VAR_pipeline_branch "$SECRET_PIPELINE_BRANCH"
+          export_if_set TF_VAR_codestar_connection_name "$SECRET_CODESTAR_CONNECTION_NAME"
+          export_if_set TF_VAR_tags "$SECRET_TAGS"
+          export_if_set TF_VAR_app_domain_name "$SECRET_TF_VAR_APP_DOMAIN_NAME"
+          export_if_set TF_VAR_route53_zone_name "$SECRET_TF_VAR_ROUTE53_ZONE_NAME"
+
+      - name: Write backend config
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        shell: bash
+        env:
+          TF_BACKEND_BUCKET: ${{ secrets.TF_BACKEND_BUCKET }}
+          TF_BACKEND_DYNAMODB_TABLE: ${{ secrets.TF_BACKEND_DYNAMODB_TABLE }}
+          TF_BACKEND_REGION: ${{ secrets.TF_VAR_AWS_REGION || 'ap-northeast-1' }}
+        run: |
+          cat > backend.hcl <<EOF
+          bucket         = "${TF_BACKEND_BUCKET}"
+          key            = "${TF_BACKEND_STATE_KEY}"
+          region         = "${TF_BACKEND_REGION}"
+          dynamodb_table = "${TF_BACKEND_DYNAMODB_TABLE}"
+          encrypt        = true
+          EOF
+
+      - name: Terraform fmt
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -input=false -backend-config=backend.hcl
+
+      - name: Terraform validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
+
+      - name: Terraform destroy plan
+        id: plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        shell: bash
+        run: |
+          set +e
+          terraform plan \
+            -destroy \
+            -input=false \
+            -no-color \
+            -detailed-exitcode \
+            -out=tfdestroy > destroy_stdout.txt
+          exit_code=$?
+          set -e
+
+          if [ "$exit_code" -eq 1 ]; then
+            cat destroy_stdout.txt
+            exit 1
+          fi
+
+          if [ "$exit_code" -eq 2 ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          terraform show -no-color tfdestroy > destroy.txt
+          terraform show -json tfdestroy > destroy.json
+
+      - name: Summarize destroy plan
+        id: summarize
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        shell: bash
+        run: |
+          if [ "${{ steps.plan.outputs.has_changes }}" != "true" ]; then
+            {
+              echo "summary<<EOF"
+              echo "No infrastructure changes to destroy."
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          delete_count=$(jq '[.resource_changes[]? | select(.change.actions == ["delete"])] | length' destroy.json)
+          other_count=$(jq '[.resource_changes[]? | select(.change.actions != ["delete"])] | length' destroy.json)
+          resource_lines=$(jq -r '[.resource_changes[]? | "- `\(.address)`"] | join("\n")' destroy.json)
+
+          {
+            echo "summary<<EOF"
+            echo "Delete: $delete_count"
+            echo "Other actions: $other_count"
+            echo
+            if [ -n "$resource_lines" ]; then
+              echo "$resource_lines"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Add destroy plan to job summary
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        shell: bash
+        run: |
+          {
+            echo "## Terraform destroy plan"
+            echo
+            echo "S3 force destroy: \`${TF_VAR_s3_force_destroy}\`"
+            echo
+            echo "${{ steps.summarize.outputs.summary }}"
+            echo
+            echo "<details><summary>Raw destroy plan</summary>"
+            echo
+            echo '```terraform'
+            sed -n '1,300p' destroy.txt
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload destroy plan artifact
+        if: steps.plan.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-destroy-plan-${{ github.run_id }}
+          path: |
+            infra/tfdestroy
+            infra/destroy.txt
+
+  apply_destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+    needs: plan_destroy
+    if: github.event.inputs.confirm_destroy == 'DESTROY' && needs.plan_destroy.outputs.has_changes == 'true'
+    environment:
+      name: terraform-destroy
+    env:
+      TF_IN_AUTOMATION: true
+      TF_WORKING_DIR: infra
+      TF_BACKEND_STATE_KEY: ${{ secrets.TF_BACKEND_STATE_KEY || 'infra/terraform.tfstate' }}
+      TF_VAR_s3_force_destroy: ${{ github.event.inputs.force_destroy_s3 == 'true' && 'true' || 'false' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.TF_VAR_AWS_REGION || 'ap-northeast-1' }}
+
+      - name: Export Terraform variables from secrets
+        env:
+          SECRET_AWS_REGION: ${{ secrets.TF_VAR_AWS_REGION }}
+          SECRET_PROJECT_NAME: ${{ secrets.TF_VAR_PROJECT_NAME }}
+          SECRET_ENVIRONMENT: ${{ secrets.TF_VAR_ENVIRONMENT }}
+          SECRET_VPC_CIDR: ${{ secrets.TF_VAR_VPC_CIDR }}
+          SECRET_PUBLIC_SUBNET_CIDRS: ${{ secrets.TF_VAR_PUBLIC_SUBNET_CIDRS }}
+          SECRET_PRIVATE_SUBNET_CIDRS: ${{ secrets.TF_VAR_PRIVATE_SUBNET_CIDRS }}
+          SECRET_DATABASE_URL: ${{ secrets.TF_VAR_DATABASE_URL }}
+          SECRET_DB_NAME: ${{ secrets.TF_VAR_DB_NAME }}
+          SECRET_DB_USERNAME: ${{ secrets.TF_VAR_DB_USERNAME }}
+          SECRET_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
+          SECRET_DB_INSTANCE_TYPE: ${{ secrets.TF_VAR_DB_INSTANCE_TYPE }}
+          SECRET_DB_VOLUME_SIZE: ${{ secrets.TF_VAR_DB_VOLUME_SIZE }}
+          SECRET_DB_KEY_NAME: ${{ secrets.TF_VAR_DB_KEY_NAME }}
+          SECRET_DB_SSH_ALLOWED_CIDR: ${{ secrets.TF_VAR_DB_SSH_ALLOWED_CIDR }}
+          SECRET_YAHOO_APP_ID: ${{ secrets.TF_VAR_YAHOO_APP_ID }}
+          SECRET_GEMINI_API_KEY: ${{ secrets.TF_VAR_GEMINI_API_KEY }}
+          SECRET_GITHUB_OWNER: ${{ secrets.TF_VAR_GITHUB_OWNER }}
+          SECRET_GITHUB_REPO: ${{ secrets.TF_VAR_GITHUB_REPO }}
+          SECRET_PIPELINE_BRANCH: ${{ secrets.TF_VAR_PIPELINE_BRANCH }}
+          SECRET_CODESTAR_CONNECTION_NAME: ${{ secrets.TF_VAR_CODESTAR_CONNECTION_NAME }}
+          SECRET_TAGS: ${{ secrets.TF_VAR_TAGS }}
+          SECRET_TF_VAR_APP_DOMAIN_NAME: ${{ secrets.TF_VAR_APP_DOMAIN_NAME }}
+          SECRET_TF_VAR_ROUTE53_ZONE_NAME: ${{ secrets.TF_VAR_ROUTE53_ZONE_NAME }}
+        shell: bash
+        run: |
+          export_if_set() {
+            key="$1"
+            value="$2"
+            if [ -n "$value" ]; then
+              printf '%s=%s\n' "$key" "$value" >> "$GITHUB_ENV"
+            fi
+          }
+
+          export_if_set TF_VAR_aws_region "$SECRET_AWS_REGION"
+          export_if_set TF_VAR_project_name "$SECRET_PROJECT_NAME"
+          export_if_set TF_VAR_environment "$SECRET_ENVIRONMENT"
+          export_if_set TF_VAR_vpc_cidr "$SECRET_VPC_CIDR"
+          export_if_set TF_VAR_public_subnet_cidrs "$SECRET_PUBLIC_SUBNET_CIDRS"
+          export_if_set TF_VAR_private_subnet_cidrs "$SECRET_PRIVATE_SUBNET_CIDRS"
+          export_if_set TF_VAR_database_url "$SECRET_DATABASE_URL"
+          export_if_set TF_VAR_db_name "$SECRET_DB_NAME"
+          export_if_set TF_VAR_db_username "$SECRET_DB_USERNAME"
+          export_if_set TF_VAR_db_password "$SECRET_DB_PASSWORD"
+          export_if_set TF_VAR_db_instance_type "$SECRET_DB_INSTANCE_TYPE"
+          export_if_set TF_VAR_db_volume_size "$SECRET_DB_VOLUME_SIZE"
+          export_if_set TF_VAR_db_key_name "$SECRET_DB_KEY_NAME"
+          export_if_set TF_VAR_db_ssh_allowed_cidr "$SECRET_DB_SSH_ALLOWED_CIDR"
+          export_if_set TF_VAR_yahoo_app_id "$SECRET_YAHOO_APP_ID"
+          export_if_set TF_VAR_gemini_api_key "$SECRET_GEMINI_API_KEY"
+          export_if_set TF_VAR_github_owner "$SECRET_GITHUB_OWNER"
+          export_if_set TF_VAR_github_repo "$SECRET_GITHUB_REPO"
+          export_if_set TF_VAR_pipeline_branch "$SECRET_PIPELINE_BRANCH"
+          export_if_set TF_VAR_codestar_connection_name "$SECRET_CODESTAR_CONNECTION_NAME"
+          export_if_set TF_VAR_tags "$SECRET_TAGS"
+          export_if_set TF_VAR_app_domain_name "$SECRET_TF_VAR_APP_DOMAIN_NAME"
+          export_if_set TF_VAR_route53_zone_name "$SECRET_TF_VAR_ROUTE53_ZONE_NAME"
+
+      - name: Write backend config
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        shell: bash
+        env:
+          TF_BACKEND_BUCKET: ${{ secrets.TF_BACKEND_BUCKET }}
+          TF_BACKEND_DYNAMODB_TABLE: ${{ secrets.TF_BACKEND_DYNAMODB_TABLE }}
+          TF_BACKEND_REGION: ${{ secrets.TF_VAR_AWS_REGION || 'ap-northeast-1' }}
+        run: |
+          cat > backend.hcl <<EOF
+          bucket         = "${TF_BACKEND_BUCKET}"
+          key            = "${TF_BACKEND_STATE_KEY}"
+          region         = "${TF_BACKEND_REGION}"
+          dynamodb_table = "${TF_BACKEND_DYNAMODB_TABLE}"
+          encrypt        = true
+          EOF
+
+      - name: Terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -input=false -backend-config=backend.hcl
+
+      - name: Download reviewed destroy plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-destroy-plan-${{ github.run_id }}
+          path: infra
+
+      - name: Add destroy summary
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        shell: bash
+        run: |
+          {
+            echo "## Terraform destroy gate"
+            echo
+            echo "This job destroys the reviewed plan from the destroy-plan job in the same workflow run."
+            echo
+            echo "S3 force destroy: \`${TF_VAR_s3_force_destroy}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Apply reviewed destroy plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform apply -input=false tfdestroy
