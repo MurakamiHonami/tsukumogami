@@ -208,6 +208,7 @@ Important limitations:
 - If `force_destroy_s3` is `false`, destroy can fail when Terraform-managed S3 buckets still contain objects.
 - The current ECR repository resource does not enable force-delete, so destroy can fail if the repository still contains images.
 - Resources not managed by the current Terraform state are never removed by `terraform destroy`.
+- If `terraform init` fails with an S3/DynamoDB checksum mismatch for the remote state, rerun the workflow after a short wait first. If it keeps failing, manually inspect the backend state and clear the stale `Digest` entry in the lock table only after verifying the S3 state object is correct.
 
 ### Recovering from a failed first apply
 
