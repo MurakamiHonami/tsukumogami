@@ -12,6 +12,11 @@ on:
         required: true
         default: false
         type: boolean
+      force_delete_ecr:
+        description: 'Delete Terraform-managed ECR repositories even when images remain'
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -34,6 +39,7 @@ jobs:
       TF_WORKING_DIR: infra
       TF_BACKEND_STATE_KEY: ${{ secrets.TF_BACKEND_STATE_KEY || 'infra/terraform.tfstate' }}
       TF_VAR_s3_force_destroy: ${{ github.event.inputs.force_destroy_s3 == 'true' && 'true' || 'false' }}
+      TF_VAR_ecr_force_delete: ${{ github.event.inputs.force_delete_ecr == 'true' && 'true' || 'false' }}
 
     steps:
       - name: Checkout
@@ -131,7 +137,21 @@ jobs:
 
       - name: Terraform init
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -input=false -backend-config=backend.hcl
+        shell: bash
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if terraform init -input=false -backend-config=backend.hcl; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 5 ]; then
+              echo "terraform init failed after ${attempt} attempts."
+              exit 1
+            fi
+
+            echo "terraform init failed on attempt ${attempt}. Waiting 30 seconds before retrying..."
+            sleep 30
+          done
 
       - name: Terraform validate
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -203,6 +223,7 @@ jobs:
             echo "## Terraform destroy plan"
             echo
             echo "S3 force destroy: \`${TF_VAR_s3_force_destroy}\`"
+            echo "ECR force delete: \`${TF_VAR_ecr_force_delete}\`"
             echo
             echo "${{ steps.summarize.outputs.summary }}"
             echo
@@ -235,6 +256,7 @@ jobs:
       TF_WORKING_DIR: infra
       TF_BACKEND_STATE_KEY: ${{ secrets.TF_BACKEND_STATE_KEY || 'infra/terraform.tfstate' }}
       TF_VAR_s3_force_destroy: ${{ github.event.inputs.force_destroy_s3 == 'true' && 'true' || 'false' }}
+      TF_VAR_ecr_force_delete: ${{ github.event.inputs.force_delete_ecr == 'true' && 'true' || 'false' }}
 
     steps:
       - name: Checkout
@@ -328,7 +350,21 @@ jobs:
 
       - name: Terraform init
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -input=false -backend-config=backend.hcl
+        shell: bash
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if terraform init -input=false -backend-config=backend.hcl; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 5 ]; then
+              echo "terraform init failed after ${attempt} attempts."
+              exit 1
+            fi
+
+            echo "terraform init failed on attempt ${attempt}. Waiting 30 seconds before retrying..."
+            sleep 30
+          done
 
       - name: Download reviewed destroy plan
         uses: actions/download-artifact@v4
@@ -346,6 +382,7 @@ jobs:
             echo "This job destroys the reviewed plan from the destroy-plan job in the same workflow run."
             echo
             echo "S3 force destroy: \`${TF_VAR_s3_force_destroy}\`"
+            echo "ECR force delete: \`${TF_VAR_ecr_force_delete}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Apply reviewed destroy plan

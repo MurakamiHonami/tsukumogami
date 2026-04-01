@@ -124,7 +124,21 @@ jobs:
 
       - name: Terraform init
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -input=false -backend-config=backend.hcl
+        shell: bash
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if terraform init -input=false -backend-config=backend.hcl; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 5 ]; then
+              echo "terraform init failed after ${attempt} attempts."
+              exit 1
+            fi
+
+            echo "terraform init failed on attempt ${attempt}. Waiting 30 seconds before retrying..."
+            sleep 30
+          done
 
       - name: Terraform validate
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -371,7 +385,21 @@ jobs:
 
       - name: Terraform init
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -input=false -backend-config=backend.hcl
+        shell: bash
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if terraform init -input=false -backend-config=backend.hcl; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 5 ]; then
+              echo "terraform init failed after ${attempt} attempts."
+              exit 1
+            fi
+
+            echo "terraform init failed on attempt ${attempt}. Waiting 30 seconds before retrying..."
+            sleep 30
+          done
 
 
 

@@ -201,13 +201,15 @@ Before using it:
 1. create a GitHub Environment named `terraform-destroy`
 2. add required reviewers to that environment
 3. decide whether to enable the `force_destroy_s3` workflow input
+4. leave `force_delete_ecr` enabled if you want Terraform to remove ECR images before deleting the repository
 
 Important limitations:
 
 - The main destroy workflow does not remove the Terraform backend bootstrap stack in `infra/bootstrap`, so the remote state S3 bucket and DynamoDB lock table remain.
 - If `force_destroy_s3` is `false`, destroy can fail when Terraform-managed S3 buckets still contain objects.
-- The current ECR repository resource does not enable force-delete, so destroy can fail if the repository still contains images.
+- If `force_delete_ecr` is `false`, destroy can fail when Terraform-managed ECR repositories still contain images.
 - Resources not managed by the current Terraform state are never removed by `terraform destroy`.
+- If `terraform init` fails with an S3/DynamoDB checksum mismatch for the remote state, rerun the workflow after a short wait first. If it keeps failing, manually inspect the backend state and clear the stale `Digest` entry in the lock table only after verifying the S3 state object is correct.
 
 ### Recovering from a failed first apply
 
